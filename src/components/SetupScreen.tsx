@@ -4,9 +4,24 @@ import { useTripContext } from '@/lib/context';
 import { PLAYERS, ROUNDS } from '@/lib/types';
 
 export default function SetupScreen() {
-  const { trip, currentPlayer, drawTeams, startTrip } = useTripContext();
+  const { trip, currentPlayer, drawTeams, startTrip, createTrip } = useTripContext();
 
-  if (!trip) return null;
+  if (!trip) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-6">
+        <div className="text-center mb-8">
+          <h1 className="font-serif text-3xl font-bold text-gold">No Active Trip</h1>
+          <p className="text-cream-dim text-sm mt-2">Start a new trip to get scoring.</p>
+        </div>
+        <button
+          onClick={() => currentPlayer && createTrip(currentPlayer)}
+          className="w-full max-w-xs py-4 bg-gold text-green-deeper font-bold text-lg rounded-xl transition-all active:scale-95 hover:bg-gold-light"
+        >
+          Create New Trip
+        </button>
+      </div>
+    );
+  }
 
   const isCommissioner = currentPlayer === trip.commissioner;
   const hasTeams = !!trip.round_teams;
