@@ -3,6 +3,7 @@
 import { useTripContext } from '@/lib/context';
 import { PLAYERS, ROUNDS } from '@/lib/types';
 import { calcStableford, calcSkins, calcNassauPoints } from '@/lib/games';
+import { StablefordInfo, NassauInfo, SkinsInfo } from './InfoModal';
 
 export default function Summary() {
   const { trip, getPlayerRoundScores, getPar } = useTripContext();
@@ -97,7 +98,7 @@ export default function Summary() {
 
       {/* Stableford Breakdown */}
       <div className="bg-green-card rounded-xl border border-gold/20 p-4">
-        <h3 className="text-xs text-gold font-medium mb-3 uppercase tracking-wider">Stableford Points</h3>
+        <h3 className="text-xs text-gold font-medium mb-3 uppercase tracking-wider inline-flex items-center">Stableford Points<StablefordInfo /></h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-center">
             <thead>
@@ -156,7 +157,7 @@ export default function Summary() {
 
       {/* Nassau Points */}
       <div className="bg-green-card rounded-xl border border-gold/20 p-4">
-        <h3 className="text-xs text-gold font-medium mb-3 uppercase tracking-wider">Nassau Points (R1-R3)</h3>
+        <h3 className="text-xs text-gold font-medium mb-3 uppercase tracking-wider inline-flex items-center">Nassau Points (R1-R3)<NassauInfo /></h3>
         <div className="grid grid-cols-4 gap-2 text-center">
           {PLAYERS.map((name, p) => (
             <div key={p} className="bg-green-deeper/50 rounded-lg py-3">
@@ -171,7 +172,7 @@ export default function Summary() {
 
       {/* Skins */}
       <div className="bg-green-card rounded-xl border border-gold/20 p-4">
-        <h3 className="text-xs text-gold font-medium mb-3 uppercase tracking-wider">Skins (R4: Dye)</h3>
+        <h3 className="text-xs text-gold font-medium mb-3 uppercase tracking-wider inline-flex items-center">Skins (R4: Dye)<SkinsInfo /></h3>
         <div className="grid grid-cols-4 gap-2 text-center">
           {PLAYERS.map((name, p) => (
             <div key={p} className="bg-green-deeper/50 rounded-lg py-3">
