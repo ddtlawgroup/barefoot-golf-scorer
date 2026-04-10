@@ -22,6 +22,7 @@ interface TripContext {
   // Setup
   drawTeams: () => Promise<void>;
   startTrip: () => Promise<void>;
+  resetTrip: () => Promise<void>;
   // Player scores helper
   getPlayerRoundScores: (round: number, player: number) => (number | null)[];
 }
@@ -225,6 +226,14 @@ export function TripProvider({ children }: { children: React.ReactNode }) {
     setTrip(prev => prev ? { ...prev, status: 'active' } : null);
   }, [trip]);
 
+  const resetTrip = useCallback(async () => {
+    if (!trip) return;
+    await supabase.from('scores').delete().eq('trip_id', trip.id);
+    await supabase.from('trips').delete().eq('id', trip.id);
+    setTrip(null);
+    setScores([]);
+  }, [trip]);
+
   const getPlayerRoundScores = useCallback((round: number, player: number): (number | null)[] => {
     const result: (number | null)[] = new Array(18).fill(null);
     scores.forEach(s => {
@@ -249,6 +258,7 @@ export function TripProvider({ children }: { children: React.ReactNode }) {
       setPar,
       drawTeams,
       startTrip,
+      resetTrip,
       getPlayerRoundScores,
     }}>
       {children}

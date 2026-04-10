@@ -1,12 +1,15 @@
 'use client';
 
+import { useState } from 'react';
 import { useTripContext } from '@/lib/context';
 import { PLAYERS, ROUNDS } from '@/lib/types';
 import { calcStableford, calcSkins, calcNassauPoints } from '@/lib/games';
 import { StablefordInfo, NassauInfo, SkinsInfo } from './InfoModal';
 
 export default function Summary() {
-  const { trip, getPlayerRoundScores, getPar } = useTripContext();
+  const { trip, getPlayerRoundScores, getPar, currentPlayer, resetTrip } = useTripContext();
+  const [showReset, setShowReset] = useState(false);
+  const isCommissioner = currentPlayer === trip?.commissioner;
 
   // Stableford per round per player
   const stablefordByRound = PLAYERS.map((_, p) =>
@@ -187,6 +190,39 @@ export default function Summary() {
           <p className="text-cream-dim/60 text-xs text-center mt-2">{skins.carries} unclaimed</p>
         )}
       </div>
+
+      {/* Reset Trip - Commissioner only, buried at bottom */}
+      {isCommissioner && (
+        <div className="pt-12 pb-4">
+          {!showReset ? (
+            <button
+              onClick={() => setShowReset(true)}
+              className="w-full text-center text-cream-dim/30 text-xs py-2"
+            >
+              Reset Trip
+            </button>
+          ) : (
+            <div className="bg-red-950/40 border border-red-500/30 rounded-xl p-4 text-center space-y-3">
+              <p className="text-red-400 font-medium text-sm">Delete this trip and all scores?</p>
+              <p className="text-cream-dim/60 text-xs">This cannot be undone. All 4 rounds of data will be permanently erased.</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowReset(false)}
+                  className="flex-1 py-2.5 bg-green-card border border-gold/20 rounded-lg text-cream-dim text-sm transition-all active:scale-95"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={resetTrip}
+                  className="flex-1 py-2.5 bg-red-600 rounded-lg text-white font-medium text-sm transition-all active:scale-95"
+                >
+                  Yes, Reset Everything
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
