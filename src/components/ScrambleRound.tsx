@@ -13,6 +13,7 @@ export default function ScrambleRound() {
   const [nine, setNine] = useState<'front' | 'back'>('front');
   const [activeInput, setActiveInput] = useState<{ team: number; hole: number } | null>(null);
   const [editingTeams, setEditingTeams] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const players = (trip?.players ?? []).map(p => p.name);
   const pars = Array.from({ length: 18 }, (_, h) => getPar(round, h));
@@ -86,87 +87,94 @@ export default function ScrambleRound() {
         </p>
       </div>
 
-      <BetPicker round={round} />
-
-      {/* Teams */}
+      {/* Settings (collapsible) */}
       <div className="bg-green-card rounded-xl border border-gold/20 p-3">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-xs text-gold font-medium uppercase tracking-wider">Scramble Teams</h3>
-          <button
-            onClick={() => setEditingTeams(!editingTeams)}
-            className="text-[10px] px-2 py-1 rounded bg-gold/10 border border-gold/20 text-gold active:scale-95"
-          >
-            {editingTeams ? 'Cancel' : 'Change'}
-          </button>
-        </div>
-        {allZero && !isOverride ? (
-          <p className="text-cream-dim/60 text-sm italic">Teams TBD (based on Stableford standings after R3)</p>
-        ) : !editingTeams ? (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-yellow-400 font-medium">{teamName(0)}</span>
-              <span className="text-cream-dim text-xs">HCP: {teamHcps[0]}</span>
-            </div>
-            <div className="text-cream-dim text-xs text-center">vs</div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-blue-400 font-medium">{teamName(1)}</span>
-              <span className="text-cream-dim text-xs">HCP: {teamHcps[1]}</span>
-            </div>
-            <p className="text-cream-dim/60 text-[10px]">
-              {isOverride ? 'Manually set' : `Suggested (1st+4th vs 2nd+3rd): ${stablefordTotals.map((s, i) => `${players[i]?.[0] ?? PLAYERS[i][0]}:${s}`).join(' ')}`}
-            </p>
+        <button
+          onClick={() => { setSettingsOpen(!settingsOpen); if (!settingsOpen) setEditingTeams(false); }}
+          className="w-full flex items-center justify-between"
+        >
+          <h3 className="text-xs text-gold font-medium uppercase tracking-wider">Settings</h3>
+          <div className="flex items-center gap-2">
+            <span className="text-cream-dim/60 text-[10px]">${getBetAmount(round)}/pt {'\u00B7'} {strokesOn ? 'Net' : 'Gross'}</span>
+            <span className="text-cream-dim text-xs">{settingsOpen ? '\u25B2' : '\u25BC'}</span>
           </div>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-cream-dim text-[10px] mb-2">Pick a pairing. The other two auto-form the second team.</p>
-            {[
-              [[0, 1], [2, 3]],
-              [[0, 2], [1, 3]],
-              [[0, 3], [1, 2]],
-            ].map((pair, i) => {
-              const [tA, tB] = pair;
-              const isCurrent = teams[0].sort().join() === [...tA].sort().join();
-              return (
+        </button>
+        {settingsOpen && (
+          <div className="mt-3 space-y-3 pt-3 border-t border-gold/10">
+            {/* Teams */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-cream-dim text-[10px]">Teams</span>
                 <button
-                  key={i}
-                  onClick={async () => {
-                    await setScrambleTeamsOverride([tA, tB] as [number[], number[]]);
-                    setEditingTeams(false);
-                  }}
-                  className={`w-full py-2 px-3 rounded-lg text-xs text-left transition-colors active:scale-95 ${
-                    isCurrent ? 'bg-gold/20 border border-gold' : 'bg-green-deeper/50 border border-gold/10'
-                  }`}
+                  onClick={() => setEditingTeams(!editingTeams)}
+                  className="text-[10px] px-2 py-1 rounded bg-gold/10 border border-gold/20 text-gold active:scale-95"
                 >
-                  <span className="text-yellow-400">{tA.map(i => players[i] ?? PLAYERS[i]).join(' & ')}</span>
-                  <span className="text-cream-dim mx-2">vs</span>
-                  <span className="text-blue-400">{tB.map(i => players[i] ?? PLAYERS[i]).join(' & ')}</span>
+                  {editingTeams ? 'Cancel' : 'Change'}
                 </button>
-              );
-            })}
-            {isOverride && (
+              </div>
+              {allZero && !isOverride ? (
+                <p className="text-cream-dim/60 text-sm italic">Teams TBD (based on Stableford after R3)</p>
+              ) : !editingTeams ? (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-yellow-400">{teamName(0)}</span>
+                    <span className="text-cream-dim">HCP: {teamHcps[0]}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-blue-400">{teamName(1)}</span>
+                    <span className="text-cream-dim">HCP: {teamHcps[1]}</span>
+                  </div>
+                  <p className="text-cream-dim/60 text-[10px]">{isOverride ? 'Manually set' : 'Auto: 1st+4th vs 2nd+3rd'}</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-cream-dim text-[10px] mb-1">Pick a pairing:</p>
+                  {[
+                    [[0, 1], [2, 3]],
+                    [[0, 2], [1, 3]],
+                    [[0, 3], [1, 2]],
+                  ].map((pair, i) => {
+                    const [tA, tB] = pair;
+                    const isCurrent = [...teams[0]].sort().join() === [...tA].sort().join();
+                    return (
+                      <button
+                        key={i}
+                        onClick={async () => { await setScrambleTeamsOverride([tA, tB] as [number[], number[]]); setEditingTeams(false); }}
+                        className={`w-full py-2 px-3 rounded-lg text-xs text-left active:scale-95 ${isCurrent ? 'bg-gold/20 border border-gold' : 'bg-green-deeper/50 border border-gold/10'}`}
+                      >
+                        <span className="text-yellow-400">{tA.map(i => players[i] ?? PLAYERS[i]).join(' & ')}</span>
+                        <span className="text-cream-dim mx-2">vs</span>
+                        <span className="text-blue-400">{tB.map(i => players[i] ?? PLAYERS[i]).join(' & ')}</span>
+                      </button>
+                    );
+                  })}
+                  {isOverride && (
+                    <button
+                      onClick={async () => { await setScrambleTeamsOverride(null); setEditingTeams(false); }}
+                      className="w-full py-2 rounded-lg text-xs bg-green-deeper/50 border border-gold/10 text-cream-dim active:scale-95"
+                    >
+                      Reset to Stableford suggestion
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            {/* Strokes Toggle */}
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-cream-dim text-[10px]">Handicap Strokes</span>
+                <span className="text-cream-dim/40 text-[10px] ml-1">({strokesOn ? 'net' : 'gross'})</span>
+              </div>
               <button
-                onClick={async () => { await setScrambleTeamsOverride(null); setEditingTeams(false); }}
-                className="w-full py-2 rounded-lg text-xs bg-green-deeper/50 border border-gold/10 text-cream-dim active:scale-95"
+                onClick={toggleScrambleStrokes}
+                className={`relative w-12 h-6 rounded-full transition-colors ${strokesOn ? 'bg-gold' : 'bg-cream-dim/20'}`}
               >
-                Reset to Stableford suggestion
+                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${strokesOn ? 'left-6' : 'left-0.5'}`} />
               </button>
-            )}
+            </div>
+            <BetPicker round={round} />
           </div>
         )}
-      </div>
-
-      {/* Strokes Toggle */}
-      <div className="bg-green-card rounded-xl border border-gold/20 p-3 flex items-center justify-between">
-        <div>
-          <span className="text-xs text-gold font-medium uppercase tracking-wider">Handicap Strokes</span>
-          <span className="text-cream-dim/60 text-[10px] ml-2">{strokesOn ? 'Net scoring' : 'Straight up (gross)'}</span>
-        </div>
-        <button
-          onClick={toggleScrambleStrokes}
-          className={`relative w-12 h-6 rounded-full transition-colors ${strokesOn ? 'bg-gold' : 'bg-cream-dim/20'}`}
-        >
-          <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${strokesOn ? 'left-6' : 'left-0.5'}`} />
-        </button>
       </div>
 
       {/* Score Totals */}

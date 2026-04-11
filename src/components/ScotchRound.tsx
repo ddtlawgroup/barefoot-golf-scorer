@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useTripContext } from '@/lib/context';
 import { PLAYERS, ROUNDS } from '@/lib/types';
 import { calcScotchRound } from '@/lib/games';
@@ -10,6 +11,8 @@ import PressPanel from './PressPanel';
 
 export default function ScotchRound({ round }: { round: number }) {
   const { trip, getPlayerNetScores, getPlayerRoundScores, getPar, getHoleExtra, getBetAmount, drawScotchTeams } = useTripContext();
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const scotchTeams = trip?.scotch_teams;
   const players = (trip?.players ?? []).map(p => p.name);
@@ -84,32 +87,47 @@ export default function ScotchRound({ round }: { round: number }) {
         </p>
       </div>
 
-      {/* Team pairings (collapsible re-draw) */}
+      {/* Settings (collapsible) */}
       <div className="bg-green-card rounded-xl border border-gold/20 p-3">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-xs text-gold font-medium uppercase tracking-wider">Teams</h3>
-          <button
-            onClick={drawScotchTeams}
-            className="text-[10px] px-2 py-1 rounded bg-gold/10 border border-gold/20 text-gold active:scale-95"
-          >
-            Re-Draw
-          </button>
-        </div>
-        <div className="space-y-1">
-          {scotchTeams.map((pairing, seg) => (
-            <div key={seg} className="flex items-center justify-between text-xs">
-              <span className="text-cream-dim">H{seg * 6 + 1}-{(seg + 1) * 6}:</span>
-              <div>
-                <span className="text-yellow-400">{teamNames(pairing[0])}</span>
-                <span className="text-cream-dim mx-1.5">vs</span>
-                <span className="text-blue-400">{teamNames(pairing[1])}</span>
+        <button
+          onClick={() => setSettingsOpen(!settingsOpen)}
+          className="w-full flex items-center justify-between"
+        >
+          <h3 className="text-xs text-gold font-medium uppercase tracking-wider">Settings</h3>
+          <div className="flex items-center gap-2">
+            <span className="text-cream-dim/60 text-[10px]">${bet}/pt</span>
+            <span className="text-cream-dim text-xs">{settingsOpen ? '\u25B2' : '\u25BC'}</span>
+          </div>
+        </button>
+        {settingsOpen && (
+          <div className="mt-3 space-y-3 pt-3 border-t border-gold/10">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-cream-dim text-[10px]">Teams (same for R1 + R3)</span>
+                <button
+                  onClick={drawScotchTeams}
+                  className="text-[10px] px-2 py-1 rounded bg-gold/10 border border-gold/20 text-gold active:scale-95"
+                >
+                  Re-Draw
+                </button>
+              </div>
+              <div className="space-y-1">
+                {scotchTeams.map((pairing, seg) => (
+                  <div key={seg} className="flex items-center justify-between text-xs">
+                    <span className="text-cream-dim">H{seg * 6 + 1}-{(seg + 1) * 6}:</span>
+                    <div>
+                      <span className="text-yellow-400">{teamNames(pairing[0])}</span>
+                      <span className="text-cream-dim mx-1.5">vs</span>
+                      <span className="text-blue-400">{teamNames(pairing[1])}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
+            <BetPicker round={round} />
+          </div>
+        )}
       </div>
-
-      <BetPicker round={round} />
 
       {/* Segment Scores */}
       <div className="bg-green-card rounded-xl border border-gold/20 p-3">
