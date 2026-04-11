@@ -153,9 +153,14 @@ export default function Scorecard({ round, showNetRow = true }: ScorecardProps) 
         </table>
       </div>
 
-      <div className="flex items-center gap-4 mt-2 px-1 text-[10px] text-cream-dim/60">
-        <span><span className="inline-block w-1.5 h-1.5 bg-gold rounded-full mr-1" />= gets stroke</span>
-        <span className="text-gold">CTP</span><span>= closest to pin (par 3)</span>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 px-1 text-[10px] text-cream-dim/60">
+        <span className="text-orange-400">Eagle</span>
+        <span className="text-yellow-400">Birdie</span>
+        <span className="text-cream">Par</span>
+        <span className="text-blue-400">Bogey</span>
+        <span className="text-red-400">Dbl+</span>
+        <span><span className="inline-block w-1.5 h-1.5 bg-gold rounded-full mr-0.5" />Stroke</span>
+        <span><span className="text-gold">CTP</span> Par 3</span>
       </div>
     </div>
   );
