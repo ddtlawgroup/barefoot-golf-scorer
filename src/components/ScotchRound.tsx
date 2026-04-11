@@ -9,10 +9,36 @@ import BetPicker from './BetPicker';
 import PressPanel from './PressPanel';
 
 export default function ScotchRound({ round }: { round: number }) {
-  const { trip, getPlayerNetScores, getPlayerRoundScores, getPar, getHoleExtra, getBetAmount } = useTripContext();
+  const { trip, getPlayerNetScores, getPlayerRoundScores, getPar, getHoleExtra, getBetAmount, drawScotchTeams } = useTripContext();
 
   const scotchTeams = trip?.scotch_teams;
-  if (!scotchTeams) return <div className="p-4 text-cream-dim">Scotch teams not configured.</div>;
+  const players = (trip?.players ?? []).map(p => p.name);
+  const playerName = (idx: number) => players[idx] ?? PLAYERS[idx];
+  const teamNames = (indices: number[]) => indices.map(i => playerName(i)).join(' & ');
+
+  // If no teams drawn yet, show setup
+  if (!scotchTeams) {
+    return (
+      <div className="px-4 py-4 space-y-4">
+        <div className="text-center">
+          <h2 className="font-serif text-2xl text-gold font-bold">{ROUNDS[round].name}</h2>
+          <p className="text-cream-dim text-sm">
+            Round {round + 1} {'\u00B7'} Par {ROUNDS[round].par} {'\u00B7'} 6-6-6 Scotch
+          </p>
+        </div>
+        <div className="bg-green-card rounded-xl border border-gold/20 p-4 text-center space-y-4">
+          <h3 className="font-serif text-lg text-gold">Draw Teams</h3>
+          <p className="text-cream-dim text-xs">Teams rotate every 6 holes. All 3 pairings used. Same order for R1 and R3.</p>
+          <button
+            onClick={drawScotchTeams}
+            className="w-full py-3 bg-gold text-green-deeper font-bold rounded-xl transition-all active:scale-95 hover:bg-gold-light"
+          >
+            Randomize 6-6-6 Teams
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const pars = Array.from({ length: 18 }, (_, h) => getPar(round, h));
   const netScores = PLAYERS.map((_, p) => getPlayerNetScores(round, p));
@@ -22,14 +48,10 @@ export default function ScotchRound({ round }: { round: number }) {
 
   const result = calcScotchRound(netScores, grossScores, scotchTeams, pars, girPlayers);
 
-  const players = (trip?.players ?? []).map(p => p.name);
-  const teamNames = (indices: number[]) => indices.map(i => players[i] ?? PLAYERS[i]).join(' & ');
-
   const holesWithScores = netScores[0].filter(s => s !== null).length;
   const currentSegment = Math.min(Math.floor(holesWithScores / 6), 2);
   const bet = getBetAmount(round);
 
-  // Calculate per-player dollars factoring in presses
   const playerDollars = PLAYERS.map((_, p) => {
     let total = 0;
     for (let h = 0; h < 18; h++) {
@@ -43,7 +65,6 @@ export default function ScotchRound({ round }: { round: number }) {
     return total;
   });
 
-  // Segment dollars
   const segmentDollars = result.segments.map((seg, i) => {
     let aTotal = 0, bTotal = 0;
     for (let h = i * 6; h < (i + 1) * 6; h++) {
@@ -61,6 +82,31 @@ export default function ScotchRound({ round }: { round: number }) {
         <p className="text-cream-dim text-sm">
           Round {round + 1} {'\u00B7'} Par {ROUNDS[round].par} {'\u00B7'} 6-6-6 Scotch
         </p>
+      </div>
+
+      {/* Team pairings (collapsible re-draw) */}
+      <div className="bg-green-card rounded-xl border border-gold/20 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs text-gold font-medium uppercase tracking-wider">Teams</h3>
+          <button
+            onClick={drawScotchTeams}
+            className="text-[10px] px-2 py-1 rounded bg-gold/10 border border-gold/20 text-gold active:scale-95"
+          >
+            Re-Draw
+          </button>
+        </div>
+        <div className="space-y-1">
+          {scotchTeams.map((pairing, seg) => (
+            <div key={seg} className="flex items-center justify-between text-xs">
+              <span className="text-cream-dim">H{seg * 6 + 1}-{(seg + 1) * 6}:</span>
+              <div>
+                <span className="text-yellow-400">{teamNames(pairing[0])}</span>
+                <span className="text-cream-dim mx-1.5">vs</span>
+                <span className="text-blue-400">{teamNames(pairing[1])}</span>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <BetPicker round={round} />

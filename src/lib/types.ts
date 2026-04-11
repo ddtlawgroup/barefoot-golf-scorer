@@ -78,7 +78,8 @@ export interface Trip {
   pars: number[][] | null;
   hole_handicaps: number[][] | null;
   scotch_teams: ScotchTeams | null; // same for R1 and R3
-  wolf_tee_order: number[] | null; // [playerIdx, playerIdx, playerIdx, playerIdx]
+  wolf_tee_order: number[] | null;
+  scramble_teams_override: [number[], number[]] | null; // manual override for scramble teams
   round_teams: null; // legacy, kept for DB compat
   bet_amounts: number[] | null; // per-round bet amount in dollars [r0, r1, r2, r3]
   scramble_strokes: boolean; // whether scramble round uses handicap strokes

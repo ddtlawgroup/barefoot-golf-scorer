@@ -11,9 +11,12 @@ import PressPanel from './PressPanel';
 
 export default function WolfRound() {
   const round = 1;
-  const { trip, getPlayerNetScores, getPlayerRoundScores, getPar, getHoleExtra, setHoleExtra, getBetAmount } = useTripContext();
+  const { trip, getPlayerNetScores, getPlayerRoundScores, getPar, getHoleExtra, setHoleExtra, getBetAmount, setWolfTeeOrder } = useTripContext();
   const [activeWolfHole, setActiveWolfHole] = useState<number | null>(null);
+  const [editingOrder, setEditingOrder] = useState(false);
+  const [tempOrder, setTempOrder] = useState<number[]>([0, 1, 2, 3]);
 
+  const hasOrder = !!trip?.wolf_tee_order;
   const teeOrder = trip?.wolf_tee_order ?? [0, 1, 2, 3];
   const players = (trip?.players ?? []).map(p => p.name);
   const pars = Array.from({ length: 18 }, (_, h) => getPar(round, h));
@@ -52,9 +55,52 @@ export default function WolfRound() {
         <p className="text-cream-dim text-sm">
           Round 2 {'\u00B7'} Par {ROUNDS[round].par} {'\u00B7'} Wolf
         </p>
-        <p className="text-cream-dim/60 text-xs mt-1">
-          Wolf tees off first. Tee order: {teeOrder.map(i => players[i]?.[0] ?? PLAYERS[i][0]).join('-')}
-        </p>
+      </div>
+
+      {/* Tee Order Setup */}
+      <div className="bg-green-card rounded-xl border border-gold/20 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs text-gold font-medium uppercase tracking-wider">Tee Order</h3>
+          <button
+            onClick={() => { setEditingOrder(!editingOrder); setTempOrder([...teeOrder]); }}
+            className="text-[10px] px-2 py-1 rounded bg-gold/10 border border-gold/20 text-gold active:scale-95"
+          >
+            {editingOrder ? 'Cancel' : hasOrder ? 'Change' : 'Set Order'}
+          </button>
+        </div>
+        {!editingOrder ? (
+          <p className="text-cream text-xs">
+            Wolf tees off first. Rotation: {teeOrder.map(i => players[i] ?? PLAYERS[i]).join(' \u2192 ')}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-cream-dim/60 text-[10px]">Wolf rotates in this order each hole.</p>
+            {tempOrder.map((playerIdx, pos) => (
+              <div key={pos} className="flex items-center gap-3">
+                <span className="text-gold text-sm font-bold w-6">{pos + 1}.</span>
+                <span className="text-cream text-sm flex-1">{players[playerIdx] ?? PLAYERS[playerIdx]}</span>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => { if (pos > 0) { const n = [...tempOrder]; [n[pos - 1], n[pos]] = [n[pos], n[pos - 1]]; setTempOrder(n); } }}
+                    disabled={pos === 0}
+                    className="w-7 h-7 rounded bg-green-deeper border border-gold/20 text-cream-dim text-xs disabled:opacity-20"
+                  >{'\u25B2'}</button>
+                  <button
+                    onClick={() => { if (pos < 3) { const n = [...tempOrder]; [n[pos], n[pos + 1]] = [n[pos + 1], n[pos]]; setTempOrder(n); } }}
+                    disabled={pos === 3}
+                    className="w-7 h-7 rounded bg-green-deeper border border-gold/20 text-cream-dim text-xs disabled:opacity-20"
+                  >{'\u25BC'}</button>
+                </div>
+              </div>
+            ))}
+            <button
+              onClick={async () => { await setWolfTeeOrder(tempOrder); setEditingOrder(false); }}
+              className="w-full py-2 bg-gold text-green-deeper font-bold rounded-lg text-sm active:scale-95"
+            >
+              Save Tee Order
+            </button>
+          </div>
+        )}
       </div>
 
       <BetPicker round={round} />

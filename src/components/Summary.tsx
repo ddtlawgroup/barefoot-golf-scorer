@@ -14,12 +14,10 @@ export default function Summary() {
   const players = (trip?.players ?? []).map(p => p.name);
   const holeHcps = trip?.hole_handicaps ?? DEFAULT_HOLE_HANDICAPS;
 
-  // Stableford per round per player (using NET scores)
-  // For R4 scramble, both players share team net score
+  // ── Stableford ──
   const stablefordByRound = PLAYERS.map((_, p) => {
     return [0, 1, 2, 3].map(r => {
       if (r === 3) {
-        // Scramble: find which team this player is on, use team net scores
         const totals = PLAYERS.map((_, pl) => {
           let t = 0;
           for (let rr = 0; rr < 3; rr++) {
@@ -29,12 +27,13 @@ export default function Summary() {
           }
           return t;
         });
-        const teams = getScrambleTeams(totals);
+        const teams: [number[], number[]] = trip?.scramble_teams_override ?? getScrambleTeams(totals);
         const teamIdx = teams[0].includes(p) ? 0 : 1;
-        const teamHcp = scrambleHandicap(
+        const strokesOn = trip?.scramble_strokes ?? true;
+        const teamHcp = strokesOn ? scrambleHandicap(
           getPlayerCourseHcp(teams[teamIdx][0], 3),
           getPlayerCourseHcp(teams[teamIdx][1], 3)
-        );
+        ) : 0;
         const netScores = Array.from({ length: 18 }, (_, h) => {
           const g = getScrambleScore(h, teamIdx);
           return scrambleNetScore(g, teamHcp, h, holeHcps[3]);
@@ -51,7 +50,7 @@ export default function Summary() {
   const totalStableford = stablefordByRound.map(rounds => rounds.reduce((a, b) => a + b, 0));
   const maxStableford = Math.max(...totalStableford);
 
-  // Total gross strokes
+  // ── Total gross strokes ──
   const totalStrokes = PLAYERS.map((_, p) => {
     let total = 0, count = 0, par = 0;
     for (let r = 0; r < 4; r++) {
@@ -63,21 +62,37 @@ export default function Summary() {
     return { total, count, par };
   });
 
-  // Scotch points (R1 + R3 combined)
+  // ── Scotch (R1+R3) ──
   const scotchPlayerPoints = [0, 0, 0, 0];
+  // Per-player dollar winnings from scotch rounds (net: what you earn minus what opponents earn)
+  const scotchPlayerDollars = [0, 0, 0, 0];
   if (trip?.scotch_teams) {
-    for (const r of [0, 2]) {
+    for (const r of [0, 2] as const) {
       const pars = Array.from({ length: 18 }, (_, h) => getPar(r, h));
       const netScores = PLAYERS.map((_, p) => getPlayerNetScores(r, p));
       const grossScores = PLAYERS.map((_, p) => getPlayerRoundScores(r, p));
       const girPlayers = Array.from({ length: 18 }, (_, h) => getHoleExtra(r, h)?.closest_gir_player ?? null);
+      const pressedHoles = Array.from({ length: 18 }, (_, h) => getHoleExtra(r, h)?.pressed ?? false);
       const result = calcScotchRound(netScores, grossScores, trip.scotch_teams, pars, girPlayers);
+      const bet = getBetAmount(r);
+
       result.playerPoints.forEach((pts, p) => { scotchPlayerPoints[p] += pts; });
+
+      // Compute per-player dollars for this round
+      for (let h = 0; h < 18; h++) {
+        const seg = Math.floor(h / 6);
+        const [teamA, teamB] = trip.scotch_teams[seg];
+        const mult = pressedHoles[h] ? 2 : 1;
+        const hr = result.holeResults[h];
+        teamA.forEach(p => { scotchPlayerDollars[p] += hr.teamAPoints * bet * mult; });
+        teamB.forEach(p => { scotchPlayerDollars[p] += hr.teamBPoints * bet * mult; });
+      }
     }
   }
 
-  // Wolf points (R2)
+  // ── Wolf (R2) ──
   const wolfPlayerPoints = [0, 0, 0, 0];
+  const wolfPlayerDollars = [0, 0, 0, 0];
   if (trip?.wolf_tee_order) {
     const pars = Array.from({ length: 18 }, (_, h) => getPar(1, h));
     const netScores = PLAYERS.map((_, p) => getPlayerNetScores(1, p));
@@ -85,11 +100,21 @@ export default function Summary() {
     const girPlayers = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.closest_gir_player ?? null);
     const wolfPartners = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.wolf_partner ?? null);
     const wolfSpits = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.wolf_spit ?? false);
+    const pressedHoles = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.pressed ?? false);
     const result = calcWolfRound(netScores, grossScores, trip.wolf_tee_order, wolfPartners, wolfSpits, pars, girPlayers);
+    const bet = getBetAmount(1);
+
     result.playerPoints.forEach((pts, p) => { wolfPlayerPoints[p] = pts; });
+
+    for (let h = 0; h < 18; h++) {
+      const hr = result.holeResults[h];
+      const mult = pressedHoles[h] ? 2 : 1;
+      hr.wolfTeam.forEach(p => { wolfPlayerDollars[p] += hr.wolfTeamPoints * bet * mult; });
+      hr.otherTeam.forEach(p => { wolfPlayerDollars[p] += hr.otherTeamPoints * bet * mult; });
+    }
   }
 
-  // Scramble result
+  // ── Scramble (R4) ──
   const stablefordR3 = PLAYERS.map((_, p) => {
     let t = 0;
     for (let r = 0; r < 3; r++) {
@@ -99,10 +124,12 @@ export default function Summary() {
     }
     return t;
   });
-  const scrambleTeams = getScrambleTeams(stablefordR3);
-  const scrambleTeamHcps = scrambleTeams.map(team =>
-    scrambleHandicap(getPlayerCourseHcp(team[0], 3), getPlayerCourseHcp(team[1], 3))
-  );
+  const scrambleTeams: [number[], number[]] = trip?.scramble_teams_override ?? getScrambleTeams(stablefordR3);
+  const strokesOn = trip?.scramble_strokes ?? true;
+  const scrambleTeamHcps = scrambleTeams.map(team => {
+    if (!strokesOn) return 0;
+    return scrambleHandicap(getPlayerCourseHcp(team[0], 3), getPlayerCourseHcp(team[1], 3));
+  });
   const scrambleTotals = [0, 1].map(t => {
     let gross = 0, net = 0, count = 0;
     for (let h = 0; h < 18; h++) {
@@ -116,7 +143,26 @@ export default function Summary() {
     return { gross, net, count };
   });
 
-  // CTP leaderboard
+  // Scramble dollars: bet on net stroke differential per hole
+  const scramblePlayerDollars = [0, 0, 0, 0];
+  const scrambleBet = getBetAmount(3);
+  for (let h = 0; h < 18; h++) {
+    const g0 = getScrambleScore(h, 0);
+    const g1 = getScrambleScore(h, 1);
+    if (g0 === null || g1 === null) continue;
+    const net0 = scrambleNetScore(g0, scrambleTeamHcps[0], h, holeHcps[3])!;
+    const net1 = scrambleNetScore(g1, scrambleTeamHcps[1], h, holeHcps[3])!;
+    if (net0 < net1) {
+      // Team 0 wins this hole
+      scrambleTeams[0].forEach(p => { scramblePlayerDollars[p] += scrambleBet; });
+      scrambleTeams[1].forEach(p => { scramblePlayerDollars[p] -= scrambleBet; });
+    } else if (net1 < net0) {
+      scrambleTeams[1].forEach(p => { scramblePlayerDollars[p] += scrambleBet; });
+      scrambleTeams[0].forEach(p => { scramblePlayerDollars[p] -= scrambleBet; });
+    }
+  }
+
+  // ── CTP leaderboard ──
   const ctpCounts = [0, 0, 0, 0];
   for (let r = 0; r < 4; r++) {
     const pars = Array.from({ length: 18 }, (_, h) => getPar(r, h));
@@ -138,6 +184,137 @@ export default function Summary() {
 
   const teamName = (indices: number[]) => indices.map(i => players[i] ?? PLAYERS[i]).join(' & ');
 
+  // ── Settlement calculation ──
+  // For Scotch/Wolf: points are zero-sum per hole between teams.
+  // Each player's net = their dollars minus average of all dollars (to make it zero-sum pairwise).
+  // Simpler: compute pairwise debts per hole based on who was on which team.
+
+  // Build per-hole pairwise ledger across all rounds
+  const ledger: number[][] = Array.from({ length: 4 }, () => Array(4).fill(0));
+  // ledger[i][j] = amount j owes i (positive = j owes i)
+
+  // Scotch: on each hole, losing team members each owe winning team members
+  if (trip?.scotch_teams) {
+    for (const r of [0, 2] as const) {
+      const pars = Array.from({ length: 18 }, (_, h) => getPar(r, h));
+      const netScores = PLAYERS.map((_, p) => getPlayerNetScores(r, p));
+      const grossScores = PLAYERS.map((_, p) => getPlayerRoundScores(r, p));
+      const girPlayers = Array.from({ length: 18 }, (_, h) => getHoleExtra(r, h)?.closest_gir_player ?? null);
+      const pressedHoles = Array.from({ length: 18 }, (_, h) => getHoleExtra(r, h)?.pressed ?? false);
+      const result = calcScotchRound(netScores, grossScores, trip.scotch_teams, pars, girPlayers);
+      const bet = getBetAmount(r);
+
+      for (let h = 0; h < 18; h++) {
+        const seg = Math.floor(h / 6);
+        const [teamA, teamB] = trip.scotch_teams[seg];
+        const mult = pressedHoles[h] ? 2 : 1;
+        const hr = result.holeResults[h];
+        const diff = hr.teamAPoints - hr.teamBPoints;
+        // diff > 0: team A won, team B members owe team A members
+        // Each losing player owes each winning player: |diff| * bet * mult / (teamSize * teamSize)
+        // Since teams are 2v2: each loser owes each winner diff * bet * mult (1-to-1 matching)
+        const perPair = Math.abs(diff) * bet * mult;
+        if (diff > 0) {
+          // B owes A
+          for (const a of teamA) {
+            for (const b of teamB) {
+              ledger[a][b] += perPair;
+            }
+          }
+        } else if (diff < 0) {
+          // A owes B
+          for (const b of teamB) {
+            for (const a of teamA) {
+              ledger[b][a] += perPair;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Wolf: same logic but teams vary per hole
+  if (trip?.wolf_tee_order) {
+    const pars = Array.from({ length: 18 }, (_, h) => getPar(1, h));
+    const netScores = PLAYERS.map((_, p) => getPlayerNetScores(1, p));
+    const grossScores = PLAYERS.map((_, p) => getPlayerRoundScores(1, p));
+    const girPlayers = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.closest_gir_player ?? null);
+    const wolfPartners = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.wolf_partner ?? null);
+    const wolfSpits = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.wolf_spit ?? false);
+    const pressedHoles = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.pressed ?? false);
+    const result = calcWolfRound(netScores, grossScores, trip.wolf_tee_order, wolfPartners, wolfSpits, pars, girPlayers);
+    const bet = getBetAmount(1);
+
+    for (let h = 0; h < 18; h++) {
+      const hr = result.holeResults[h];
+      const mult = pressedHoles[h] ? 2 : 1;
+      const diff = hr.wolfTeamPoints - hr.otherTeamPoints;
+      const perPair = Math.abs(diff) * bet * mult;
+      if (diff > 0) {
+        for (const w of hr.wolfTeam) {
+          for (const o of hr.otherTeam) {
+            ledger[w][o] += perPair;
+          }
+        }
+      } else if (diff < 0) {
+        for (const o of hr.otherTeam) {
+          for (const w of hr.wolfTeam) {
+            ledger[o][w] += perPair;
+          }
+        }
+      }
+    }
+  }
+
+  // Scramble: per-hole, losing team owes winning team
+  for (let h = 0; h < 18; h++) {
+    const g0 = getScrambleScore(h, 0);
+    const g1 = getScrambleScore(h, 1);
+    if (g0 === null || g1 === null) continue;
+    const net0 = scrambleNetScore(g0, scrambleTeamHcps[0], h, holeHcps[3])!;
+    const net1 = scrambleNetScore(g1, scrambleTeamHcps[1], h, holeHcps[3])!;
+    if (net0 < net1) {
+      for (const w of scrambleTeams[0]) {
+        for (const l of scrambleTeams[1]) {
+          ledger[w][l] += scrambleBet;
+        }
+      }
+    } else if (net1 < net0) {
+      for (const w of scrambleTeams[1]) {
+        for (const l of scrambleTeams[0]) {
+          ledger[w][l] += scrambleBet;
+        }
+      }
+    }
+  }
+
+  // Net the ledger: netOwed[i][j] = net amount j owes i
+  const netOwed: number[][] = Array.from({ length: 4 }, () => Array(4).fill(0));
+  for (let i = 0; i < 4; i++) {
+    for (let j = i + 1; j < 4; j++) {
+      const net = ledger[i][j] - ledger[j][i];
+      if (net > 0) {
+        netOwed[i][j] = net; // j owes i
+      } else if (net < 0) {
+        netOwed[j][i] = -net; // i owes j
+      }
+    }
+  }
+
+  // Build settlement list
+  const settlements: { from: number; to: number; amount: number }[] = [];
+  for (let i = 0; i < 4; i++) {
+    for (let j = i + 1; j < 4; j++) {
+      if (netOwed[i][j] > 0) {
+        settlements.push({ from: j, to: i, amount: netOwed[i][j] });
+      } else if (netOwed[j][i] > 0) {
+        settlements.push({ from: i, to: j, amount: netOwed[j][i] });
+      }
+    }
+  }
+
+  const hasAnyDollars = settlements.some(s => s.amount > 0);
+
   return (
     <div className="px-4 py-4 space-y-4">
       <div className="text-center">
@@ -156,6 +333,45 @@ export default function Summary() {
         </div>
         {maxStableford > 0 && <p className="text-cream-dim text-sm mt-1">{maxStableford} Stableford pts</p>}
       </div>
+
+      {/* Settlement */}
+      {hasAnyDollars && (
+        <div className="bg-green-card rounded-xl border-2 border-gold/40 p-4">
+          <h3 className="text-xs text-gold font-medium mb-3 uppercase tracking-wider">Settle Up</h3>
+          <div className="space-y-2">
+            {settlements.filter(s => s.amount > 0.01).map((s, i) => (
+              <div key={i} className="flex items-center justify-between bg-green-deeper/50 rounded-lg p-3">
+                <div className="text-sm">
+                  <span className="text-red-400 font-medium">{players[s.from] ?? PLAYERS[s.from]}</span>
+                  <span className="text-cream-dim mx-2">pays</span>
+                  <span className="text-green-400 font-medium">{players[s.to] ?? PLAYERS[s.to]}</span>
+                </div>
+                <span className="text-gold font-bold text-lg">${s.amount.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+          {/* Net per player */}
+          <div className="mt-3 pt-2 border-t border-gold/20">
+            <div className="grid grid-cols-4 gap-2 text-center text-xs">
+              {PLAYERS.map((name, p) => {
+                let netVal = 0;
+                for (let j = 0; j < 4; j++) {
+                  if (j === p) continue;
+                  netVal += (netOwed[p][j] || 0) - (netOwed[j][p] || 0);
+                }
+                return (
+                  <div key={p} className="bg-green-deeper/50 rounded-lg py-2">
+                    <div className="text-cream-dim mb-0.5">{players[p]?.[0] ?? name[0]}</div>
+                    <div className={`font-bold ${netVal > 0 ? 'text-green-400' : netVal < 0 ? 'text-red-400' : 'text-cream-dim/50'}`}>
+                      {netVal > 0 ? '+' : ''}{netVal === 0 ? '-' : `$${netVal.toFixed(2)}`}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stableford */}
       <div className="bg-green-card rounded-xl border border-gold/20 p-4">

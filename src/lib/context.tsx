@@ -45,6 +45,7 @@ interface TripContext {
   getBetAmount: (round: number) => number;
   // Scramble strokes toggle
   toggleScrambleStrokes: () => Promise<void>;
+  setScrambleTeamsOverride: (teams: [number[], number[]] | null) => Promise<void>;
 }
 
 const Context = createContext<TripContext | null>(null);
@@ -321,6 +322,12 @@ export function TripProvider({ children }: { children: React.ReactNode }) {
     setTrip(prev => prev ? { ...prev, scramble_strokes: newVal } : null);
   }, [trip]);
 
+  const setScrambleTeamsOverride = useCallback(async (teams: [number[], number[]] | null) => {
+    if (!trip) return;
+    await supabase.from('trips').update({ scramble_teams_override: teams }).eq('id', trip.id);
+    setTrip(prev => prev ? { ...prev, scramble_teams_override: teams } : null);
+  }, [trip]);
+
   // ── Scramble scores ──
 
   const getScrambleScore = useCallback((hole: number, team: number): number | null => {
@@ -352,7 +359,7 @@ export function TripProvider({ children }: { children: React.ReactNode }) {
       scrambleScores, getScrambleScore, setScrambleScore,
       updatePlayers, drawScotchTeams, setWolfTeeOrder,
       startTrip, resetTrip,
-      setBetAmount, getBetAmount, toggleScrambleStrokes,
+      setBetAmount, getBetAmount, toggleScrambleStrokes, setScrambleTeamsOverride,
     }}>
       {children}
     </Context.Provider>

@@ -9,9 +9,10 @@ import BetPicker from './BetPicker';
 
 export default function ScrambleRound() {
   const round = 3;
-  const { trip, getPlayerNetScores, getPar, getPlayerCourseHcp, getScrambleScore, setScrambleScore, getHoleExtra, getBetAmount, toggleScrambleStrokes } = useTripContext();
+  const { trip, getPlayerNetScores, getPar, getPlayerCourseHcp, getScrambleScore, setScrambleScore, getHoleExtra, getBetAmount, toggleScrambleStrokes, setScrambleTeamsOverride } = useTripContext();
   const [nine, setNine] = useState<'front' | 'back'>('front');
   const [activeInput, setActiveInput] = useState<{ team: number; hole: number } | null>(null);
+  const [editingTeams, setEditingTeams] = useState(false);
 
   const players = (trip?.players ?? []).map(p => p.name);
   const pars = Array.from({ length: 18 }, (_, h) => getPar(round, h));
@@ -28,7 +29,9 @@ export default function ScrambleRound() {
     return total;
   });
 
-  const teams = getScrambleTeams(stablefordTotals);
+  const suggestedTeams = getScrambleTeams(stablefordTotals);
+  const teams: [number[], number[]] = trip?.scramble_teams_override ?? suggestedTeams;
+  const isOverride = !!trip?.scramble_teams_override;
   const allZero = stablefordTotals.every(s => s === 0);
 
   // Scramble handicaps per team (0 if strokes toggled off)
@@ -87,10 +90,18 @@ export default function ScrambleRound() {
 
       {/* Teams */}
       <div className="bg-green-card rounded-xl border border-gold/20 p-3">
-        <h3 className="text-xs text-gold font-medium mb-2 uppercase tracking-wider">Scramble Teams</h3>
-        {allZero ? (
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs text-gold font-medium uppercase tracking-wider">Scramble Teams</h3>
+          <button
+            onClick={() => setEditingTeams(!editingTeams)}
+            className="text-[10px] px-2 py-1 rounded bg-gold/10 border border-gold/20 text-gold active:scale-95"
+          >
+            {editingTeams ? 'Cancel' : 'Change'}
+          </button>
+        </div>
+        {allZero && !isOverride ? (
           <p className="text-cream-dim/60 text-sm italic">Teams TBD (based on Stableford standings after R3)</p>
-        ) : (
+        ) : !editingTeams ? (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-yellow-400 font-medium">{teamName(0)}</span>
@@ -102,8 +113,44 @@ export default function ScrambleRound() {
               <span className="text-cream-dim text-xs">HCP: {teamHcps[1]}</span>
             </div>
             <p className="text-cream-dim/60 text-[10px]">
-              Based on Stableford: {stablefordTotals.map((s, i) => `${players[i]?.[0] ?? PLAYERS[i][0]}:${s}`).join(' ')}
+              {isOverride ? 'Manually set' : `Suggested (1st+4th vs 2nd+3rd): ${stablefordTotals.map((s, i) => `${players[i]?.[0] ?? PLAYERS[i][0]}:${s}`).join(' ')}`}
             </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-cream-dim text-[10px] mb-2">Pick a pairing. The other two auto-form the second team.</p>
+            {[
+              [[0, 1], [2, 3]],
+              [[0, 2], [1, 3]],
+              [[0, 3], [1, 2]],
+            ].map((pair, i) => {
+              const [tA, tB] = pair;
+              const isCurrent = teams[0].sort().join() === [...tA].sort().join();
+              return (
+                <button
+                  key={i}
+                  onClick={async () => {
+                    await setScrambleTeamsOverride([tA, tB] as [number[], number[]]);
+                    setEditingTeams(false);
+                  }}
+                  className={`w-full py-2 px-3 rounded-lg text-xs text-left transition-colors active:scale-95 ${
+                    isCurrent ? 'bg-gold/20 border border-gold' : 'bg-green-deeper/50 border border-gold/10'
+                  }`}
+                >
+                  <span className="text-yellow-400">{tA.map(i => players[i] ?? PLAYERS[i]).join(' & ')}</span>
+                  <span className="text-cream-dim mx-2">vs</span>
+                  <span className="text-blue-400">{tB.map(i => players[i] ?? PLAYERS[i]).join(' & ')}</span>
+                </button>
+              );
+            })}
+            {isOverride && (
+              <button
+                onClick={async () => { await setScrambleTeamsOverride(null); setEditingTeams(false); }}
+                className="w-full py-2 rounded-lg text-xs bg-green-deeper/50 border border-gold/10 text-cream-dim active:scale-95"
+              >
+                Reset to Stableford suggestion
+              </button>
+            )}
           </div>
         )}
       </div>

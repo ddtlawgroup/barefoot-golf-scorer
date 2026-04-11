@@ -5,9 +5,8 @@ import { useTripContext } from '@/lib/context';
 import { PLAYERS, ROUNDS, PlayerData } from '@/lib/types';
 
 export default function SetupScreen() {
-  const { trip, currentPlayer, drawScotchTeams, setWolfTeeOrder, startTrip, createTrip, updatePlayers } = useTripContext();
+  const { trip, currentPlayer, startTrip, createTrip, updatePlayers } = useTripContext();
   const [handicaps, setHandicaps] = useState<Record<string, string>>({});
-  const [wolfOrder, setWolfOrder] = useState<number[]>([0, 1, 2, 3]);
 
   if (!trip) {
     return (
@@ -27,9 +26,6 @@ export default function SetupScreen() {
   }
 
   const isCommissioner = currentPlayer === trip.commissioner;
-  const hasScotchTeams = !!trip.scotch_teams;
-  const hasWolfOrder = !!trip.wolf_tee_order;
-
   const players = trip.players as PlayerData[];
 
   const handleHandicapChange = (idx: number, value: string) => {
@@ -44,20 +40,7 @@ export default function SetupScreen() {
     await updatePlayers(updated);
   };
 
-  const moveWolf = (from: number, to: number) => {
-    const newOrder = [...wolfOrder];
-    const [item] = newOrder.splice(from, 1);
-    newOrder.splice(to, 0, item);
-    setWolfOrder(newOrder);
-  };
-
-  const saveWolfOrder = async () => {
-    await setWolfTeeOrder(wolfOrder);
-  };
-
-  const playerName = (idx: number) => players[idx]?.name ?? PLAYERS[idx];
-
-  const canStart = hasScotchTeams && hasWolfOrder && players.every(p => p.handicapIndex > 0);
+  const canStart = players.every(p => p.handicapIndex > 0);
 
   return (
     <div className="min-h-screen px-4 py-8 space-y-6">
@@ -79,6 +62,7 @@ export default function SetupScreen() {
             </div>
           ))}
         </div>
+        <p className="text-cream-dim/60 text-[10px] mt-3">Team draws, wolf order, and scramble teams are configured at the top of each round.</p>
       </div>
 
       {/* Handicaps */}
@@ -124,97 +108,6 @@ export default function SetupScreen() {
         )}
       </div>
 
-      {/* 6-6-6 Scotch Team Draw */}
-      <div className="bg-green-card rounded-xl border border-gold/20 p-4">
-        <h3 className="font-serif text-lg text-gold mb-3">6-6-6 Scotch Teams</h3>
-        <p className="text-cream-dim text-xs mb-4">
-          Teams rotate every 6 holes. All 3 pairings used. Same order for R1 (Fazio) and R3 (Norman).
-        </p>
-
-        {hasScotchTeams && trip.scotch_teams ? (
-          <div className="space-y-2">
-            {trip.scotch_teams.map((pairing, seg) => (
-              <div key={seg} className="flex items-center justify-between text-sm border-b border-gold/10 pb-2 last:border-0 last:pb-0">
-                <span className="text-cream-dim">Holes {seg * 6 + 1}-{(seg + 1) * 6}:</span>
-                <div>
-                  <span className="text-yellow-400">{pairing[0].map(i => playerName(i)).join(' & ')}</span>
-                  <span className="text-cream-dim mx-2">vs</span>
-                  <span className="text-blue-400">{pairing[1].map(i => playerName(i)).join(' & ')}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-cream-dim/60 text-sm italic">No teams drawn yet.</p>
-        )}
-
-        {isCommissioner && (
-          <button
-            onClick={drawScotchTeams}
-            className="mt-4 w-full py-2.5 bg-gold/20 hover:bg-gold/30 border border-gold/40 rounded-lg text-gold font-medium text-sm transition-all active:scale-95"
-          >
-            {hasScotchTeams ? 'Re-Draw Teams' : 'Randomize Teams'}
-          </button>
-        )}
-      </div>
-
-      {/* Wolf Tee Order */}
-      <div className="bg-green-card rounded-xl border border-gold/20 p-4">
-        <h3 className="font-serif text-lg text-gold mb-3">Wolf Tee Order (R2)</h3>
-        <p className="text-cream-dim text-xs mb-4">
-          Set the fixed tee order for the Wolf round. Wolf rotates in this order every hole.
-        </p>
-
-        <div className="space-y-2">
-          {wolfOrder.map((playerIdx, pos) => (
-            <div key={pos} className="flex items-center gap-3">
-              <span className="text-gold text-sm font-bold w-6">{pos + 1}.</span>
-              <span className="text-cream text-sm flex-1">{playerName(playerIdx)}</span>
-              {isCommissioner && (
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => pos > 0 && moveWolf(pos, pos - 1)}
-                    disabled={pos === 0}
-                    className="w-7 h-7 rounded bg-green-deeper border border-gold/20 text-cream-dim text-xs disabled:opacity-20"
-                  >
-                    {'\u25B2'}
-                  </button>
-                  <button
-                    onClick={() => pos < 3 && moveWolf(pos, pos + 1)}
-                    disabled={pos === 3}
-                    className="w-7 h-7 rounded bg-green-deeper border border-gold/20 text-cream-dim text-xs disabled:opacity-20"
-                  >
-                    {'\u25BC'}
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {isCommissioner && (
-          <button
-            onClick={saveWolfOrder}
-            className="mt-4 w-full py-2.5 bg-gold/20 hover:bg-gold/30 border border-gold/40 rounded-lg text-gold font-medium text-sm transition-all active:scale-95"
-          >
-            {hasWolfOrder ? 'Update Tee Order' : 'Save Tee Order'}
-          </button>
-        )}
-        {hasWolfOrder && trip.wolf_tee_order && (
-          <p className="text-green-400 text-xs mt-2 text-center">
-            Saved: {trip.wolf_tee_order.map(i => playerName(i)).join(' \u2192 ')}
-          </p>
-        )}
-      </div>
-
-      {/* R4 Info */}
-      <div className="bg-green-card rounded-xl border border-gold/20 p-4">
-        <h3 className="font-serif text-lg text-gold mb-2">R4: 2-Man Scramble (Dye)</h3>
-        <p className="text-cream-dim text-xs">
-          Teams auto-assigned after R3 based on Stableford standings: 1st + 4th vs 2nd + 3rd.
-        </p>
-      </div>
-
       {/* Start Trip */}
       {isCommissioner && (
         <button
@@ -227,11 +120,7 @@ export default function SetupScreen() {
       )}
 
       {!canStart && isCommissioner && (
-        <p className="text-cream-dim/60 text-xs text-center">
-          {!players.every(p => p.handicapIndex > 0) && 'Set all handicaps. '}
-          {!hasScotchTeams && 'Draw Scotch teams. '}
-          {!hasWolfOrder && 'Save Wolf tee order.'}
-        </p>
+        <p className="text-cream-dim/60 text-xs text-center">Set all handicaps to start.</p>
       )}
 
       {!isCommissioner && (
