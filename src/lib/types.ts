@@ -2,10 +2,10 @@ export const PLAYERS = ['Derek', 'Pat', 'Joey', 'Matt'] as const;
 export type PlayerName = (typeof PLAYERS)[number];
 
 export const ROUNDS = [
-  { name: 'Barefoot Fazio', par: 71, format: '6-6-6 Scotch', slope: 128, rating: 67.7 },
-  { name: 'Barefoot Love', par: 72, format: 'Wolf', slope: 130, rating: 70.3 },
-  { name: 'Barefoot Norman', par: 72, format: '6-6-6 Scotch', slope: 125, rating: 68.7 },
-  { name: 'Barefoot Dye', par: 72, format: '2-Man Scramble', slope: 132, rating: 70.0 },
+  { name: 'Barefoot Fazio', par: 71, format: '6-6-6 Scotch', slope: 136, rating: 71.0 },
+  { name: 'Barefoot Love', par: 72, format: 'Wolf', slope: 137, rating: 72.4 },
+  { name: 'Barefoot Norman', par: 72, format: '6-6-6 Scotch', slope: 136, rating: 71.4 },
+  { name: 'Barefoot Dye', par: 72, format: '2-Man Scramble', slope: 134, rating: 72.9 },
 ] as const;
 
 export const ROUND_LABELS = [
