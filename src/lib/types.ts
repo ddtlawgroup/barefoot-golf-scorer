@@ -81,6 +81,7 @@ export interface Trip {
   wolf_tee_order: number[] | null; // [playerIdx, playerIdx, playerIdx, playerIdx]
   round_teams: null; // legacy, kept for DB compat
   bet_amounts: number[] | null; // per-round bet amount in dollars [r0, r1, r2, r3]
+  scramble_strokes: boolean; // whether scramble round uses handicap strokes
   status: 'setup' | 'active' | 'complete';
   commissioner: string;
 }
@@ -109,6 +110,7 @@ export interface HoleExtra {
   wolf_partner: number | null;
   wolf_spit: boolean;
   ctp_winner: number | null;
+  pressed: boolean;
   updated_at: string;
 }
 

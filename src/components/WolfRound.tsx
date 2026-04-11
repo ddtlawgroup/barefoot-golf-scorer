@@ -7,6 +7,7 @@ import { calcWolfRound, getWolfForHole } from '@/lib/games';
 import Scorecard from './Scorecard';
 import HoleExtrasPanel from './HoleExtrasPanel';
 import BetPicker from './BetPicker';
+import PressPanel from './PressPanel';
 
 export default function WolfRound() {
   const round = 1;
@@ -22,9 +23,22 @@ export default function WolfRound() {
   const wolfPartners = Array.from({ length: 18 }, (_, h) => getHoleExtra(round, h)?.wolf_partner ?? null);
   const wolfSpits = Array.from({ length: 18 }, (_, h) => getHoleExtra(round, h)?.wolf_spit ?? false);
   const girPlayers = Array.from({ length: 18 }, (_, h) => getHoleExtra(round, h)?.closest_gir_player ?? null);
+  const pressedHoles = Array.from({ length: 18 }, (_, h) => getHoleExtra(round, h)?.pressed ?? false);
 
   const result = calcWolfRound(netScores, grossScores, teeOrder, wolfPartners, wolfSpits, pars, girPlayers);
   const bet = getBetAmount(round);
+
+  // Per-player dollars with presses
+  const playerDollars = PLAYERS.map((_, p) => {
+    let total = 0;
+    for (let h = 0; h < 18; h++) {
+      const hr = result.holeResults[h];
+      const mult = pressedHoles[h] ? 2 : 1;
+      if (hr.wolfTeam.includes(p)) total += hr.wolfTeamPoints * bet * mult;
+      else total += hr.otherTeamPoints * bet * mult;
+    }
+    return total;
+  });
 
   const handleWolfPick = async (hole: number, partner: number | null, spit: boolean = false) => {
     await setHoleExtra(round, hole, { wolf_partner: partner as any, wolf_spit: spit });
@@ -53,7 +67,7 @@ export default function WolfRound() {
             <div key={p} className="bg-green-deeper/50 rounded-lg py-2">
               <div className="text-cream-dim text-xs mb-1">{players[p] ?? name}</div>
               <div className="text-lg font-bold text-gold">{result.playerPoints[p]}</div>
-              <div className="text-[10px] text-cream-dim/50">${(result.playerPoints[p] * bet).toFixed(2)}</div>
+              <div className="text-[10px] text-cream-dim/50">${playerDollars[p].toFixed(2)}</div>
             </div>
           ))}
         </div>
@@ -141,6 +155,7 @@ export default function WolfRound() {
         )}
       </div>
 
+      <PressPanel round={round} />
       <HoleExtrasPanel round={round} showGir showCtp />
       <Scorecard round={round} />
     </div>

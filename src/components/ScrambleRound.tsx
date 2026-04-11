@@ -9,7 +9,7 @@ import BetPicker from './BetPicker';
 
 export default function ScrambleRound() {
   const round = 3;
-  const { trip, getPlayerNetScores, getPar, getPlayerCourseHcp, getScrambleScore, setScrambleScore, getHoleExtra, getBetAmount } = useTripContext();
+  const { trip, getPlayerNetScores, getPar, getPlayerCourseHcp, getScrambleScore, setScrambleScore, getHoleExtra, getBetAmount, toggleScrambleStrokes } = useTripContext();
   const [nine, setNine] = useState<'front' | 'back'>('front');
   const [activeInput, setActiveInput] = useState<{ team: number; hole: number } | null>(null);
 
@@ -31,8 +31,10 @@ export default function ScrambleRound() {
   const teams = getScrambleTeams(stablefordTotals);
   const allZero = stablefordTotals.every(s => s === 0);
 
-  // Scramble handicaps per team
+  // Scramble handicaps per team (0 if strokes toggled off)
+  const strokesOn = trip?.scramble_strokes ?? true;
   const teamHcps = teams.map(team => {
+    if (!strokesOn) return 0;
     const hcp1 = getPlayerCourseHcp(team[0], round);
     const hcp2 = getPlayerCourseHcp(team[1], round);
     return scrambleHandicap(hcp1, hcp2);
@@ -104,6 +106,20 @@ export default function ScrambleRound() {
             </p>
           </div>
         )}
+      </div>
+
+      {/* Strokes Toggle */}
+      <div className="bg-green-card rounded-xl border border-gold/20 p-3 flex items-center justify-between">
+        <div>
+          <span className="text-xs text-gold font-medium uppercase tracking-wider">Handicap Strokes</span>
+          <span className="text-cream-dim/60 text-[10px] ml-2">{strokesOn ? 'Net scoring' : 'Straight up (gross)'}</span>
+        </div>
+        <button
+          onClick={toggleScrambleStrokes}
+          className={`relative w-12 h-6 rounded-full transition-colors ${strokesOn ? 'bg-gold' : 'bg-cream-dim/20'}`}
+        >
+          <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${strokesOn ? 'left-6' : 'left-0.5'}`} />
+        </button>
       </div>
 
       {/* Score Totals */}

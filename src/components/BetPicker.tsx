@@ -2,7 +2,7 @@
 
 import { useTripContext } from '@/lib/context';
 
-const BET_OPTIONS = [0.5, 1, 2, 3, 5, 10];
+const BET_OPTIONS = [0.5, 1, 2, 3, 4, 5];
 
 export default function BetPicker({ round }: { round: number }) {
   const { getBetAmount, setBetAmount } = useTripContext();
