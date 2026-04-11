@@ -5,10 +5,11 @@ import { useTripContext } from '@/lib/context';
 import { PLAYERS, ROUNDS, DEFAULT_HOLE_HANDICAPS, scrambleHandicap, getPar3Holes } from '@/lib/types';
 import { getScrambleTeams, scrambleNetScore, calcStableford, stablefordPoints } from '@/lib/games';
 import HoleExtrasPanel from './HoleExtrasPanel';
+import BetPicker from './BetPicker';
 
 export default function ScrambleRound() {
   const round = 3;
-  const { trip, getPlayerNetScores, getPar, getPlayerCourseHcp, getScrambleScore, setScrambleScore, getHoleExtra } = useTripContext();
+  const { trip, getPlayerNetScores, getPar, getPlayerCourseHcp, getScrambleScore, setScrambleScore, getHoleExtra, getBetAmount } = useTripContext();
   const [nine, setNine] = useState<'front' | 'back'>('front');
   const [activeInput, setActiveInput] = useState<{ team: number; hole: number } | null>(null);
 
@@ -79,6 +80,8 @@ export default function ScrambleRound() {
           Round 4 {'\u00B7'} Par {ROUNDS[round].par} {'\u00B7'} 2-Man Scramble
         </p>
       </div>
+
+      <BetPicker round={round} />
 
       {/* Teams */}
       <div className="bg-green-card rounded-xl border border-gold/20 p-3">

@@ -40,6 +40,9 @@ interface TripContext {
   setWolfTeeOrder: (order: number[]) => Promise<void>;
   startTrip: () => Promise<void>;
   resetTrip: () => Promise<void>;
+  // Betting
+  setBetAmount: (round: number, amount: number) => Promise<void>;
+  getBetAmount: (round: number) => number;
 }
 
 const Context = createContext<TripContext | null>(null);
@@ -295,6 +298,20 @@ export function TripProvider({ children }: { children: React.ReactNode }) {
     }
   }, [trip]);
 
+  // ── Betting ──
+
+  const setBetAmount = useCallback(async (round: number, amount: number) => {
+    if (!trip) return;
+    const betAmounts = [...(trip.bet_amounts ?? [1, 1, 1, 1])];
+    betAmounts[round] = amount;
+    await supabase.from('trips').update({ bet_amounts: betAmounts }).eq('id', trip.id);
+    setTrip(prev => prev ? { ...prev, bet_amounts: betAmounts } : null);
+  }, [trip]);
+
+  const getBetAmount = useCallback((round: number): number => {
+    return trip?.bet_amounts?.[round] ?? 1;
+  }, [trip]);
+
   // ── Scramble scores ──
 
   const getScrambleScore = useCallback((hole: number, team: number): number | null => {
@@ -326,6 +343,7 @@ export function TripProvider({ children }: { children: React.ReactNode }) {
       scrambleScores, getScrambleScore, setScrambleScore,
       updatePlayers, drawScotchTeams, setWolfTeeOrder,
       startTrip, resetTrip,
+      setBetAmount, getBetAmount,
     }}>
       {children}
     </Context.Provider>

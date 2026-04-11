@@ -56,9 +56,9 @@ export function ScotchInfo() {
         <p><strong className="text-gold">2 pts - Low Individual NET:</strong> The player with the lowest net score wins 2 points for their team. If tied across teams, no points awarded.</p>
         <p><strong className="text-gold">2 pts - Low Team Total:</strong> Add both teammates' net scores. Lower combined total wins 2 points. Ties = no points.</p>
         <p><strong className="text-gold">1 pt - Closest GIR:</strong> Among players who hit the green in regulation, the one closest to the pin wins 1 point for their team. If nobody hits GIR, no point.</p>
-        <p><strong className="text-gold">1 pt - Birdie:</strong> If any player on a team makes a net birdie or better, their team gets 1 point. Both teams can earn this point.</p>
+        <p><strong className="text-gold">1 pt - Natural Birdie:</strong> If any player on a team makes a <strong>natural</strong> birdie (gross score under par, not net), their team gets 1 point. A "4-for-3" after a handicap stroke does NOT count. Both teams can earn this point.</p>
       </div>
-      <p><strong className="text-cream">Sweep + Birdie Bonus:</strong> If one team sweeps all 6 points AND has a birdie, the total doubles to <strong className="text-gold">12 points</strong> for that hole.</p>
+      <p><strong className="text-cream">Sweep + Natural Birdie Bonus:</strong> If one team sweeps all 6 points AND has a natural birdie, the total doubles to <strong className="text-gold">12 points</strong> for that hole. Without a natural birdie, the maximum is 5 points (the sweep alone doesn't trigger the double).</p>
       <p>Rounds 1 (Fazio) and 3 (Norman) both use the same team rotation order.</p>
     </InfoModal>
   );
@@ -71,8 +71,8 @@ export function WolfInfo() {
       <p><strong className="text-gold">How it works:</strong></p>
       <div className="bg-green-deeper/50 rounded-lg p-3 space-y-2">
         <p><strong className="text-cream">Wolf Rotation:</strong> The Wolf rotates each hole in a fixed order (set during setup): 1-2-3-4-1-2-3-4...</p>
-        <p><strong className="text-cream">Tee Shots:</strong> The other 3 players tee off first, in order. The Wolf tees off last.</p>
-        <p><strong className="text-cream">Picking:</strong> After EACH player's tee shot, the Wolf can claim that player as their partner. Once they pass, they can't go back.</p>
+        <p><strong className="text-cream">Tee Shots:</strong> The Wolf tees off FIRST. Then the other 3 players hit in order.</p>
+        <p><strong className="text-cream">Picking:</strong> After EACH player's tee shot, the Wolf can claim that player as their partner. You must decide before the next player tees off. Once you pass, you can't go back.</p>
         <p><strong className="text-cream">Lone Wolf:</strong> If the Wolf passes on all 3, they go alone (1 vs 3). All points on the hole are <strong className="text-gold">DOUBLED</strong> (12 available instead of 6).</p>
         <p><strong className="text-cream">Spit:</strong> A picked player can decline ("spit"), going solo against the other 3 with doubled points.</p>
       </div>

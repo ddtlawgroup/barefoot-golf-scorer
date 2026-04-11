@@ -5,12 +5,10 @@ import {
 
 // ── Handicap helpers ──
 
-// Get course handicap for a player on a given round
 export function getPlayerCourseHcp(player: PlayerData, round: number): number {
   return courseHandicap(player.handicapIndex, ROUNDS[round].slope);
 }
 
-// Get net scores for a player on a round (gross scores + handicap strokes)
 export function getNetScores(
   grossScores: (number | null)[],
   courseHcp: number,
@@ -21,29 +19,27 @@ export function getNetScores(
 }
 
 // ── 6-6-6 Scotch Scoring ──
-// Per-hole: up to 6 points (2 low individual, 2 low team total, 1 closest GIR, 1 birdie)
-// Sweep + birdie = doubles to 12
+// Per-hole: up to 6 points (2 low individual NET, 2 low team total NET, 1 CTP/GIR, 1 NATURAL birdie)
+// Sweep + natural birdie = doubles to 12. Max 5 without a natural birdie.
 
 export interface ScotchHoleResult {
-  lowIndividualTeam: number | null; // 0 or 1 (team index) or null (tie)
+  lowIndividualTeam: number | null;
   lowTeamTotalTeam: number | null;
-  girTeam: number | null; // team of closest GIR player
-  birdieTeams: number[]; // which teams had a net birdie
-  sweep: boolean; // one team got all 6 non-birdie points AND has birdie
+  girTeam: number | null;
+  birdieTeams: number[]; // teams with a NATURAL birdie
+  sweep: boolean;
   teamAPoints: number;
   teamBPoints: number;
 }
 
 export function calcScotchHole(
-  netScores: (number | null)[], // all 4 players' net scores for this hole
-  teamA: number[], // player indices
+  netScores: (number | null)[], // for low ball / low team total
+  grossScores: (number | null)[], // for natural birdie check
+  teamA: number[],
   teamB: number[],
   par: number,
   closestGirPlayer: number | null
 ): ScotchHoleResult {
-  const aScores = teamA.map(p => netScores[p]);
-  const bScores = teamB.map(p => netScores[p]);
-
   let teamAPoints = 0;
   let teamBPoints = 0;
 
@@ -61,11 +57,12 @@ export function calcScotchHole(
       lowIndividualTeam = 1;
       teamBPoints += 2;
     }
-    // Tie across teams = no points
   }
 
-  // 2 pts: Low Team Total
+  // 2 pts: Low Team Total (NET)
   let lowTeamTotalTeam: number | null = null;
+  const aScores = teamA.map(p => netScores[p]);
+  const bScores = teamB.map(p => netScores[p]);
   const aTotal = aScores.every(s => s !== null)
     ? (aScores as number[]).reduce((a, b) => a + b, 0)
     : null;
@@ -73,62 +70,49 @@ export function calcScotchHole(
     ? (bScores as number[]).reduce((a, b) => a + b, 0)
     : null;
   if (aTotal !== null && bTotal !== null) {
-    if (aTotal < bTotal) {
-      lowTeamTotalTeam = 0;
-      teamAPoints += 2;
-    } else if (bTotal < aTotal) {
-      lowTeamTotalTeam = 1;
-      teamBPoints += 2;
-    }
+    if (aTotal < bTotal) { lowTeamTotalTeam = 0; teamAPoints += 2; }
+    else if (bTotal < aTotal) { lowTeamTotalTeam = 1; teamBPoints += 2; }
   }
 
-  // 1 pt: Closest GIR
+  // 1 pt: Closest GIR/CTP
   let girTeam: number | null = null;
   if (closestGirPlayer !== null) {
-    if (teamA.includes(closestGirPlayer)) {
-      girTeam = 0;
-      teamAPoints += 1;
-    } else if (teamB.includes(closestGirPlayer)) {
-      girTeam = 1;
-      teamBPoints += 1;
-    }
+    if (teamA.includes(closestGirPlayer)) { girTeam = 0; teamAPoints += 1; }
+    else if (teamB.includes(closestGirPlayer)) { girTeam = 1; teamBPoints += 1; }
   }
 
-  // 1 pt: Birdie (net birdie or better) - both teams can get it
+  // 1 pt: NATURAL birdie (gross score < par) - both teams can get it
   const birdieTeams: number[] = [];
-  const aBirdie = teamA.some(p => netScores[p] !== null && netScores[p]! < par);
-  const bBirdie = teamB.some(p => netScores[p] !== null && netScores[p]! < par);
+  const aBirdie = teamA.some(p => grossScores[p] !== null && grossScores[p]! < par);
+  const bBirdie = teamB.some(p => grossScores[p] !== null && grossScores[p]! < par);
   if (aBirdie) { birdieTeams.push(0); teamAPoints += 1; }
   if (bBirdie) { birdieTeams.push(1); teamBPoints += 1; }
 
-  // Sweep + Birdie bonus: if one team has all 6 AND birdie, double to 12
+  // Sweep + Natural Birdie = doubles to 12
   let sweep = false;
   if (teamAPoints >= 6 && birdieTeams.includes(0) && teamBPoints === 0) {
-    sweep = true;
-    teamAPoints = 12;
+    sweep = true; teamAPoints = 12;
   } else if (teamBPoints >= 6 && birdieTeams.includes(1) && teamAPoints === 0) {
-    sweep = true;
-    teamBPoints = 12;
+    sweep = true; teamBPoints = 12;
   }
 
   return { lowIndividualTeam, lowTeamTotalTeam, girTeam, birdieTeams, sweep, teamAPoints, teamBPoints };
 }
 
-// Calc all 18 holes for a Scotch round, returns points per segment and total
 export interface ScotchRoundResult {
   segments: { teamA: number; teamB: number; pairing: [number[], number[]] }[];
   totalA: number;
   totalB: number;
   holeResults: ScotchHoleResult[];
-  // Per-player point totals (a player's team points across their segments)
   playerPoints: number[];
 }
 
 export function calcScotchRound(
-  netScores: (number | null)[][], // [player][hole]
-  scotchTeams: ScotchTeams, // 3 pairings, one per 6-hole segment
+  netScores: (number | null)[][],
+  grossScores: (number | null)[][],
+  scotchTeams: ScotchTeams,
   pars: number[],
-  closestGirPlayers: (number | null)[] // per hole
+  closestGirPlayers: (number | null)[]
 ): ScotchRoundResult {
   const holeResults: ScotchHoleResult[] = [];
   const segments: { teamA: number; teamB: number; pairing: [number[], number[]] }[] = [];
@@ -140,15 +124,14 @@ export function calcScotchRound(
 
     for (let h = seg * 6; h < (seg + 1) * 6; h++) {
       const holeNet = [0, 1, 2, 3].map(p => netScores[p][h]);
-      const result = calcScotchHole(holeNet, teamA, teamB, pars[h], closestGirPlayers[h]);
+      const holeGross = [0, 1, 2, 3].map(p => grossScores[p][h]);
+      const result = calcScotchHole(holeNet, holeGross, teamA, teamB, pars[h], closestGirPlayers[h]);
       holeResults.push(result);
       segA += result.teamAPoints;
       segB += result.teamBPoints;
     }
 
     segments.push({ teamA: segA, teamB: segB, pairing: [teamA, teamB] });
-
-    // Distribute points to players
     teamA.forEach(p => { playerPoints[p] += segA; });
     teamB.forEach(p => { playerPoints[p] += segB; });
   }
@@ -160,19 +143,19 @@ export function calcScotchRound(
 }
 
 // ── Wolf Scoring ──
-// Uses same point system as Scotch but with Wolf pick mechanics
+// Wolf tees off FIRST, watches others hit, picks after each tee shot.
+// Same 6-point system. Natural birdie only. Lone wolf / spit = all points doubled.
 
 export interface WolfHoleResult {
   wolfPlayer: number;
-  partner: number | null; // null = lone wolf
+  partner: number | null;
   spit: boolean;
   isLoneWolf: boolean;
-  // Teams for this hole: wolfTeam vs otherTeam
   wolfTeam: number[];
   otherTeam: number[];
   wolfTeamPoints: number;
   otherTeamPoints: number;
-  doubled: boolean; // lone wolf or spit = doubled
+  doubled: boolean;
 }
 
 export function getWolfForHole(hole: number, teeOrder: number[]): number {
@@ -181,6 +164,7 @@ export function getWolfForHole(hole: number, teeOrder: number[]): number {
 
 export function calcWolfHole(
   netScores: (number | null)[],
+  grossScores: (number | null)[],
   wolf: number,
   partner: number | null,
   spit: boolean,
@@ -195,21 +179,16 @@ export function calcWolfHole(
   let otherTeam: number[];
 
   if (spit && partner !== null) {
-    // Spit: the picked player goes alone vs other 3
     wolfTeam = allPlayers.filter(p => p !== partner);
     otherTeam = [partner];
   } else if (partner === null) {
-    // Lone wolf: wolf alone vs other 3
     wolfTeam = [wolf];
     otherTeam = allPlayers.filter(p => p !== wolf);
   } else {
-    // Normal: wolf + partner vs other 2
     wolfTeam = [wolf, partner];
     otherTeam = allPlayers.filter(p => !wolfTeam.includes(p));
   }
 
-  // For lone wolf/spit, team total uses doubled individual score
-  // Calculate points using same scotch system
   let wolfTeamPoints = 0;
   let otherTeamPoints = 0;
 
@@ -223,36 +202,31 @@ export function calcWolfHole(
     else if (oWinners.length > 0 && wWinners.length === 0) otherTeamPoints += 2;
   }
 
-  // 2 pts: Low Team Total
+  // 2 pts: Low Team Total (NET)
   const wolfScores = wolfTeam.map(p => netScores[p]).filter(s => s !== null) as number[];
   const otherScoresArr = otherTeam.map(p => netScores[p]).filter(s => s !== null) as number[];
   if (wolfScores.length === wolfTeam.length && otherScoresArr.length === otherTeam.length) {
     let wTotal = wolfScores.reduce((a, b) => a + b, 0);
     let oTotal = otherScoresArr.reduce((a, b) => a + b, 0);
-    // Lone wolf: double wolf's score for team total
-    if (isLoneWolf && wolfTeam.length === 1) {
-      wTotal = wTotal * 2;
-    }
-    if (isLoneWolf && otherTeam.length === 1) {
-      oTotal = oTotal * 2;
-    }
+    if (isLoneWolf && wolfTeam.length === 1) wTotal *= 2;
+    if (isLoneWolf && otherTeam.length === 1) oTotal *= 2;
     if (wTotal < oTotal) wolfTeamPoints += 2;
     else if (oTotal < wTotal) otherTeamPoints += 2;
   }
 
-  // 1 pt: Closest GIR
+  // 1 pt: Closest GIR/CTP
   if (closestGirPlayer !== null) {
     if (wolfTeam.includes(closestGirPlayer)) wolfTeamPoints += 1;
     else if (otherTeam.includes(closestGirPlayer)) otherTeamPoints += 1;
   }
 
-  // 1 pt: Birdie
-  const wBirdie = wolfTeam.some(p => netScores[p] !== null && netScores[p]! < par);
-  const oBirdie = otherTeam.some(p => netScores[p] !== null && netScores[p]! < par);
+  // 1 pt: NATURAL birdie (gross < par)
+  const wBirdie = wolfTeam.some(p => grossScores[p] !== null && grossScores[p]! < par);
+  const oBirdie = otherTeam.some(p => grossScores[p] !== null && grossScores[p]! < par);
   if (wBirdie) wolfTeamPoints += 1;
   if (oBirdie) otherTeamPoints += 1;
 
-  // Sweep + Birdie doubles to 12
+  // Sweep + Natural Birdie = 12
   if (wolfTeamPoints >= 6 && wBirdie && otherTeamPoints === 0) {
     wolfTeamPoints = 12;
   } else if (otherTeamPoints >= 6 && oBirdie && wolfTeamPoints === 0) {
@@ -265,25 +239,15 @@ export function calcWolfHole(
     otherTeamPoints *= 2;
   }
 
-  return {
-    wolfPlayer: wolf,
-    partner,
-    spit,
-    isLoneWolf,
-    wolfTeam,
-    otherTeam,
-    wolfTeamPoints,
-    otherTeamPoints,
-    doubled,
-  };
+  return { wolfPlayer: wolf, partner, spit, isLoneWolf, wolfTeam, otherTeam, wolfTeamPoints, otherTeamPoints, doubled };
 }
 
-// Calc full wolf round, return per-player point totals
 export function calcWolfRound(
   netScores: (number | null)[][],
+  grossScores: (number | null)[][],
   teeOrder: number[],
-  wolfPartners: (number | null)[], // per hole, null = lone wolf
-  wolfSpits: boolean[], // per hole
+  wolfPartners: (number | null)[],
+  wolfSpits: boolean[],
   pars: number[],
   closestGirPlayers: (number | null)[]
 ): { playerPoints: number[]; holeResults: WolfHoleResult[] } {
@@ -293,7 +257,8 @@ export function calcWolfRound(
   for (let h = 0; h < 18; h++) {
     const wolf = getWolfForHole(h, teeOrder);
     const holeNet = [0, 1, 2, 3].map(p => netScores[p][h]);
-    const result = calcWolfHole(holeNet, wolf, wolfPartners[h], wolfSpits[h], pars[h], closestGirPlayers[h]);
+    const holeGross = [0, 1, 2, 3].map(p => grossScores[p][h]);
+    const result = calcWolfHole(holeNet, holeGross, wolf, wolfPartners[h], wolfSpits[h], pars[h], closestGirPlayers[h]);
     holeResults.push(result);
 
     result.wolfTeam.forEach(p => { playerPoints[p] += result.wolfTeamPoints; });
@@ -305,19 +270,16 @@ export function calcWolfRound(
 
 // ── Scramble (Round 4) ──
 
-// Determine scramble teams from Stableford standings: 1st+4th vs 2nd+3rd
 export function getScrambleTeams(stablefordTotals: number[]): [number[], number[]] {
   const ranked = stablefordTotals
     .map((pts, idx) => ({ idx, pts }))
-    .sort((a, b) => b.pts - a.pts); // highest first
-
+    .sort((a, b) => b.pts - a.pts);
   return [
-    [ranked[0].idx, ranked[3].idx], // 1st + 4th
-    [ranked[1].idx, ranked[2].idx], // 2nd + 3rd
+    [ranked[0].idx, ranked[3].idx],
+    [ranked[1].idx, ranked[2].idx],
   ];
 }
 
-// Calc scramble net score for a team on a hole
 export function scrambleNetScore(
   grossScore: number | null,
   teamHcp: number,

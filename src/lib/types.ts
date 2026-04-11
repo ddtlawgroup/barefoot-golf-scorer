@@ -80,6 +80,7 @@ export interface Trip {
   scotch_teams: ScotchTeams | null; // same for R1 and R3
   wolf_tee_order: number[] | null; // [playerIdx, playerIdx, playerIdx, playerIdx]
   round_teams: null; // legacy, kept for DB compat
+  bet_amounts: number[] | null; // per-round bet amount in dollars [r0, r1, r2, r3]
   status: 'setup' | 'active' | 'complete';
   commissioner: string;
 }

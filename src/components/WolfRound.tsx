@@ -6,22 +6,25 @@ import { PLAYERS, ROUNDS } from '@/lib/types';
 import { calcWolfRound, getWolfForHole } from '@/lib/games';
 import Scorecard from './Scorecard';
 import HoleExtrasPanel from './HoleExtrasPanel';
+import BetPicker from './BetPicker';
 
 export default function WolfRound() {
-  const round = 1; // Wolf is always R2
-  const { trip, getPlayerNetScores, getPar, getHoleExtra, setHoleExtra } = useTripContext();
+  const round = 1;
+  const { trip, getPlayerNetScores, getPlayerRoundScores, getPar, getHoleExtra, setHoleExtra, getBetAmount } = useTripContext();
   const [activeWolfHole, setActiveWolfHole] = useState<number | null>(null);
 
   const teeOrder = trip?.wolf_tee_order ?? [0, 1, 2, 3];
   const players = (trip?.players ?? []).map(p => p.name);
   const pars = Array.from({ length: 18 }, (_, h) => getPar(round, h));
   const netScores = PLAYERS.map((_, p) => getPlayerNetScores(round, p));
+  const grossScores = PLAYERS.map((_, p) => getPlayerRoundScores(round, p));
 
   const wolfPartners = Array.from({ length: 18 }, (_, h) => getHoleExtra(round, h)?.wolf_partner ?? null);
   const wolfSpits = Array.from({ length: 18 }, (_, h) => getHoleExtra(round, h)?.wolf_spit ?? false);
   const girPlayers = Array.from({ length: 18 }, (_, h) => getHoleExtra(round, h)?.closest_gir_player ?? null);
 
-  const result = calcWolfRound(netScores, teeOrder, wolfPartners, wolfSpits, pars, girPlayers);
+  const result = calcWolfRound(netScores, grossScores, teeOrder, wolfPartners, wolfSpits, pars, girPlayers);
+  const bet = getBetAmount(round);
 
   const handleWolfPick = async (hole: number, partner: number | null, spit: boolean = false) => {
     await setHoleExtra(round, hole, { wolf_partner: partner as any, wolf_spit: spit });
@@ -30,13 +33,17 @@ export default function WolfRound() {
 
   return (
     <div className="px-4 py-4 space-y-4">
-      {/* Header */}
       <div className="text-center">
         <h2 className="font-serif text-2xl text-gold font-bold">{ROUNDS[round].name}</h2>
         <p className="text-cream-dim text-sm">
           Round 2 {'\u00B7'} Par {ROUNDS[round].par} {'\u00B7'} Wolf
         </p>
+        <p className="text-cream-dim/60 text-xs mt-1">
+          Wolf tees off first. Tee order: {teeOrder.map(i => players[i]?.[0] ?? PLAYERS[i][0]).join('-')}
+        </p>
       </div>
+
+      <BetPicker round={round} />
 
       {/* Player Point Totals */}
       <div className="bg-green-card rounded-xl border border-gold/20 p-3">
@@ -46,6 +53,7 @@ export default function WolfRound() {
             <div key={p} className="bg-green-deeper/50 rounded-lg py-2">
               <div className="text-cream-dim text-xs mb-1">{players[p] ?? name}</div>
               <div className="text-lg font-bold text-gold">{result.playerPoints[p]}</div>
+              <div className="text-[10px] text-cream-dim/50">${(result.playerPoints[p] * bet).toFixed(2)}</div>
             </div>
           ))}
         </div>
@@ -54,14 +62,13 @@ export default function WolfRound() {
       {/* Wolf Picks Per Hole */}
       <div className="bg-green-card rounded-xl border border-gold/20 p-3">
         <h3 className="text-xs text-gold font-medium mb-2 uppercase tracking-wider">Wolf Decisions</h3>
-        <p className="text-cream-dim/60 text-[10px] mb-2">Tap a hole to set the Wolf's pick. Wolf rotates: {teeOrder.map(i => players[i]?.[0] ?? PLAYERS[i][0]).join('-')}.</p>
+        <p className="text-cream-dim/60 text-[10px] mb-2">Tap a hole to set the Wolf's pick.</p>
         <div className="grid grid-cols-6 gap-1.5">
           {Array.from({ length: 18 }, (_, h) => {
             const wolf = getWolfForHole(h, teeOrder);
             const extra = getHoleExtra(round, h);
             const partner = extra?.wolf_partner;
             const spit = extra?.wolf_spit ?? false;
-            const isLone = partner === null || partner === undefined;
             const isExpanded = activeWolfHole === h;
 
             let label = '';
@@ -91,7 +98,6 @@ export default function WolfRound() {
           })}
         </div>
 
-        {/* Expanded wolf pick UI */}
         {activeWolfHole !== null && (
           <div className="mt-3 bg-green-deeper/50 rounded-lg p-3 space-y-2">
             {(() => {
@@ -101,8 +107,9 @@ export default function WolfRound() {
               return (
                 <>
                   <p className="text-cream text-xs">
-                    Hole {h + 1}: <span className="text-gold font-medium">{players[wolf] ?? PLAYERS[wolf]}</span> is Wolf
+                    Hole {h + 1}: <span className="text-gold font-medium">{players[wolf] ?? PLAYERS[wolf]}</span> is Wolf (tees off first, watches others)
                   </p>
+                  <p className="text-cream-dim/60 text-[10px]">Wolf picks after each tee shot. Can't go back once you pass.</p>
                   <div className="space-y-1.5">
                     {others.map(p => (
                       <div key={p} className="flex gap-2">
@@ -134,10 +141,7 @@ export default function WolfRound() {
         )}
       </div>
 
-      {/* GIR + CTP */}
       <HoleExtrasPanel round={round} showGir showCtp />
-
-      {/* Scorecard */}
       <Scorecard round={round} />
     </div>
   );

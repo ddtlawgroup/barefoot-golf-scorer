@@ -7,7 +7,7 @@ import { calcStableford, calcScotchRound, calcWolfRound, getScrambleTeams, scram
 import { StablefordInfo, ScotchInfo, WolfInfo, ScrambleInfo, CtpInfo } from './InfoModal';
 
 export default function Summary() {
-  const { trip, getPlayerNetScores, getPlayerRoundScores, getPar, getPlayerCourseHcp, getHoleExtra, getScrambleScore, currentPlayer, resetTrip } = useTripContext();
+  const { trip, getPlayerNetScores, getPlayerRoundScores, getPar, getPlayerCourseHcp, getHoleExtra, getScrambleScore, currentPlayer, resetTrip, getBetAmount } = useTripContext();
   const [showReset, setShowReset] = useState(false);
   const isCommissioner = currentPlayer === trip?.commissioner;
 
@@ -69,8 +69,9 @@ export default function Summary() {
     for (const r of [0, 2]) {
       const pars = Array.from({ length: 18 }, (_, h) => getPar(r, h));
       const netScores = PLAYERS.map((_, p) => getPlayerNetScores(r, p));
+      const grossScores = PLAYERS.map((_, p) => getPlayerRoundScores(r, p));
       const girPlayers = Array.from({ length: 18 }, (_, h) => getHoleExtra(r, h)?.closest_gir_player ?? null);
-      const result = calcScotchRound(netScores, trip.scotch_teams, pars, girPlayers);
+      const result = calcScotchRound(netScores, grossScores, trip.scotch_teams, pars, girPlayers);
       result.playerPoints.forEach((pts, p) => { scotchPlayerPoints[p] += pts; });
     }
   }
@@ -80,10 +81,11 @@ export default function Summary() {
   if (trip?.wolf_tee_order) {
     const pars = Array.from({ length: 18 }, (_, h) => getPar(1, h));
     const netScores = PLAYERS.map((_, p) => getPlayerNetScores(1, p));
+    const grossScores = PLAYERS.map((_, p) => getPlayerRoundScores(1, p));
     const girPlayers = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.closest_gir_player ?? null);
     const wolfPartners = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.wolf_partner ?? null);
     const wolfSpits = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.wolf_spit ?? false);
-    const result = calcWolfRound(netScores, trip.wolf_tee_order, wolfPartners, wolfSpits, pars, girPlayers);
+    const result = calcWolfRound(netScores, grossScores, trip.wolf_tee_order, wolfPartners, wolfSpits, pars, girPlayers);
     result.playerPoints.forEach((pts, p) => { wolfPlayerPoints[p] = pts; });
   }
 
