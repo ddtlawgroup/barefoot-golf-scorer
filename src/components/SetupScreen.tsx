@@ -7,8 +7,6 @@ import { PLAYERS, ROUNDS, PlayerData } from '@/lib/types';
 export default function SetupScreen() {
   const { trip, currentPlayer, startTrip, createTrip, updatePlayers } = useTripContext();
   const [handicaps, setHandicaps] = useState<Record<string, string>>({});
-  const [roundHcps, setRoundHcps] = useState<Record<string, string>>({});
-  const [showPerRound, setShowPerRound] = useState(false);
 
   if (!trip) {
     return (
@@ -34,24 +32,11 @@ export default function SetupScreen() {
     setHandicaps(prev => ({ ...prev, [idx]: value }));
   };
 
-  const handleRoundHcpChange = (playerIdx: number, roundIdx: number, value: string) => {
-    setRoundHcps(prev => ({ ...prev, [`${playerIdx}-${roundIdx}`]: value }));
-  };
-
   const saveHandicaps = async () => {
-    const updated = players.map((p, i) => {
-      const baseHcp = parseFloat(handicaps[i] ?? '') || p.handicapIndex;
-      const perRound: number[] = [0, 1, 2, 3].map(r => {
-        const val = roundHcps[`${i}-${r}`];
-        return val ? parseFloat(val) : (p.roundHandicaps?.[r] ?? 0);
-      });
-      const hasPerRound = perRound.some(v => v > 0);
-      return {
-        ...p,
-        handicapIndex: baseHcp,
-        roundHandicaps: hasPerRound ? perRound : undefined,
-      };
-    });
+    const updated = players.map((p, i) => ({
+      ...p,
+      handicapIndex: parseFloat(handicaps[i] ?? '') || p.handicapIndex,
+    }));
     await updatePlayers(updated);
   };
 
@@ -77,13 +62,13 @@ export default function SetupScreen() {
             </div>
           ))}
         </div>
-        <p className="text-cream-dim/60 text-[10px] mt-3">Team draws, wolf order, and scramble teams are configured at the top of each round.</p>
+        <p className="text-cream-dim/60 text-[10px] mt-3">Teams, handicaps, and bet amounts are set in each round's settings.</p>
       </div>
 
-      {/* Handicaps */}
+      {/* Handicaps (base) */}
       <div className="bg-green-card rounded-xl border border-gold/20 p-4">
-        <h3 className="font-serif text-lg text-gold mb-3">Handicap Index</h3>
-        <p className="text-cream-dim text-xs mb-4">Enter each player's handicap index. All games use net scores.</p>
+        <h3 className="font-serif text-lg text-gold mb-3">Default Handicap Index</h3>
+        <p className="text-cream-dim text-xs mb-4">Set a base handicap here. You can override per round in each round's settings.</p>
         <div className="space-y-3">
           {players.map((p, i) => (
             <div key={i} className="flex items-center justify-between gap-3">
@@ -100,42 +85,6 @@ export default function SetupScreen() {
             </div>
           ))}
         </div>
-
-        {/* Per-round overrides */}
-        <button
-          onClick={() => setShowPerRound(!showPerRound)}
-          className="mt-3 text-[10px] text-gold/60 underline"
-        >
-          {showPerRound ? 'Hide per-round overrides' : 'Set different handicap per round?'}
-        </button>
-
-        {showPerRound && (
-          <div className="mt-3 space-y-3 pt-3 border-t border-gold/10">
-            <p className="text-cream-dim/60 text-[10px]">Leave blank to use the default handicap above.</p>
-            {players.map((p, i) => (
-              <div key={i}>
-                <span className="text-cream text-xs font-medium">{p.name}</span>
-                <div className="grid grid-cols-4 gap-1.5 mt-1">
-                  {ROUNDS.map((round, r) => (
-                    <div key={r}>
-                      <label className="text-cream-dim/40 text-[9px]">R{r + 1}</label>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        step="0.1"
-                        placeholder={p.handicapIndex > 0 ? p.handicapIndex.toString() : '-'}
-                        value={roundHcps[`${i}-${r}`] ?? (p.roundHandicaps?.[r] && p.roundHandicaps[r] > 0 ? p.roundHandicaps[r].toString() : '')}
-                        onChange={(e) => handleRoundHcpChange(i, r, e.target.value)}
-                        className="w-full bg-green-deeper border border-gold/20 rounded px-2 py-1 text-cream text-xs text-center outline-none focus:border-gold"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
         {isCommissioner && (
           <button
             onClick={saveHandicaps}
@@ -143,20 +92,6 @@ export default function SetupScreen() {
           >
             Save Handicaps
           </button>
-        )}
-        {players.some(p => p.handicapIndex > 0) && (
-          <div className="mt-3 space-y-1">
-            {ROUNDS.map((round, r) => (
-              <div key={r} className="text-xs text-cream-dim flex justify-between">
-                <span>{round.name.replace('Barefoot ', '')} (Slope {round.slope}):</span>
-                <span>{players.map((p, i) => {
-                  const hcpIdx = p.roundHandicaps?.[r] || p.handicapIndex;
-                  const ch = Math.round(hcpIdx * (round.slope / 113));
-                  return `${p.name[0]}:${ch}`;
-                }).join('  ')}</span>
-              </div>
-            ))}
-          </div>
         )}
       </div>
 

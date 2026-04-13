@@ -6,6 +6,7 @@ import { PLAYERS, ROUNDS, DEFAULT_HOLE_HANDICAPS, scrambleHandicap, getPar3Holes
 import { getScrambleTeams, scrambleNetScore, calcStableford, stablefordPoints } from '@/lib/games';
 import HoleExtrasPanel from './HoleExtrasPanel';
 import BetPicker from './BetPicker';
+import RoundHandicapEditor from './RoundHandicapEditor';
 
 export default function ScrambleRound() {
   const round = 3;
@@ -194,6 +195,7 @@ export default function ScrambleRound() {
                 <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${strokesOn ? 'left-6' : 'left-0.5'}`} />
               </button>
             </div>
+            <RoundHandicapEditor round={round} />
             <BetPicker round={round} />
           </div>
         )}

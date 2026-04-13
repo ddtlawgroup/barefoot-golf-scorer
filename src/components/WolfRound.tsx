@@ -8,6 +8,7 @@ import Scorecard from './Scorecard';
 import HoleExtrasPanel from './HoleExtrasPanel';
 import BetPicker from './BetPicker';
 import PressPanel from './PressPanel';
+import RoundHandicapEditor from './RoundHandicapEditor';
 
 export default function WolfRound() {
   const round = 1;
@@ -116,6 +117,7 @@ export default function WolfRound() {
                 </div>
               )}
             </div>
+            <RoundHandicapEditor round={round} />
             <BetPicker round={round} />
           </div>
         )}

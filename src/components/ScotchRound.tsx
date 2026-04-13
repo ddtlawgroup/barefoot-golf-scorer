@@ -8,6 +8,7 @@ import Scorecard from './Scorecard';
 import HoleExtrasPanel from './HoleExtrasPanel';
 import BetPicker from './BetPicker';
 import PressPanel from './PressPanel';
+import RoundHandicapEditor from './RoundHandicapEditor';
 
 export default function ScotchRound({ round }: { round: number }) {
   const { trip, getPlayerNetScores, getPlayerRoundScores, getPar, getHoleExtra, getBetAmount, drawScotchTeams } = useTripContext();
@@ -124,6 +125,7 @@ export default function ScotchRound({ round }: { round: number }) {
                 ))}
               </div>
             </div>
+            <RoundHandicapEditor round={round} />
             <BetPicker round={round} />
           </div>
         )}
