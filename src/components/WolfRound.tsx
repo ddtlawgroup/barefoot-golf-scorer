@@ -220,7 +220,7 @@ export default function WolfRound() {
       </div>
 
       <PressPanel round={round} />
-      <Scorecard round={round} />
+      <Scorecard round={round} holePoints={result.holeResults.map(hr => ({ teamAPoints: hr.wolfTeamPoints, teamBPoints: hr.otherTeamPoints }))} />
       <HoleExtrasPanel round={round} showGir showCtp />
     </div>
   );

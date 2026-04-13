@@ -173,7 +173,7 @@ export default function ScotchRound({ round }: { round: number }) {
       </div>
 
       <PressPanel round={round} />
-      <Scorecard round={round} />
+      <Scorecard round={round} holePoints={result.holeResults} />
       <HoleExtrasPanel round={round} showGir showCtp />
     </div>
   );

@@ -6,10 +6,12 @@ import { PLAYERS, getScoreColor, getScoreBg } from '@/lib/types';
 
 interface ScorecardProps {
   round: number;
-  showNetRow?: boolean; // show net score row below gross
+  showNetRow?: boolean;
+  // Optional per-hole points: [hole] => { teamA, teamB } or total
+  holePoints?: { teamAPoints: number; teamBPoints: number }[];
 }
 
-export default function Scorecard({ round, showNetRow = true }: ScorecardProps) {
+export default function Scorecard({ round, showNetRow = true, holePoints }: ScorecardProps) {
   const { getScore, setScore, getPar, getStrokeHoles, getPlayerRoundScores, getPlayerNetScores, trip } = useTripContext();
   const [nine, setNine] = useState<'front' | 'back'>('front');
   const [activeInput, setActiveInput] = useState<{ player: number; hole: number } | null>(null);
@@ -175,6 +177,28 @@ export default function Scorecard({ round, showNetRow = true }: ScorecardProps) 
                 </tr>
               );
             })}
+
+            {/* Points row */}
+            {holePoints && (
+              <tr className="border-t-2 border-gold/30">
+                <td className="py-1.5 px-1 text-left text-xs font-medium text-gold">Pts</td>
+                {holes.map(h => {
+                  const hp = holePoints[h];
+                  const total = hp ? hp.teamAPoints + hp.teamBPoints : 0;
+                  return (
+                    <td key={h} className="py-1.5 px-0.5 text-xs font-bold text-gold">
+                      {total > 0 ? total : '-'}
+                    </td>
+                  );
+                })}
+                <td className="py-1.5 px-1 text-xs font-bold text-gold">
+                  {holes.reduce((s, h) => {
+                    const hp = holePoints[h];
+                    return s + (hp ? hp.teamAPoints + hp.teamBPoints : 0);
+                  }, 0) || '-'}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
