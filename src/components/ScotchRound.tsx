@@ -6,14 +6,12 @@ import { PLAYERS, ROUNDS } from '@/lib/types';
 import { calcScotchRound } from '@/lib/games';
 import Scorecard from './Scorecard';
 import HoleExtrasPanel from './HoleExtrasPanel';
-import BetPicker from './BetPicker';
-import PressPanel from './PressPanel';
 import RoundHandicapEditor from './RoundHandicapEditor';
 
 export default function ScotchRound({ round }: { round: number }) {
-  const { trip, getPlayerNetScores, getPlayerRoundScores, getPar, getHoleExtra, getBetAmount, drawScotchTeams } = useTripContext();
-
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const { trip, getPlayerNetScores, getPlayerRoundScores, getPar, getHoleExtra, drawScotchTeams } = useTripContext();
 
   const scotchTeams = trip?.scotch_teams;
   const players = (trip?.players ?? []).map(p => p.name);
@@ -48,36 +46,11 @@ export default function ScotchRound({ round }: { round: number }) {
   const netScores = PLAYERS.map((_, p) => getPlayerNetScores(round, p));
   const grossScores = PLAYERS.map((_, p) => getPlayerRoundScores(round, p));
   const girPlayers = Array.from({ length: 18 }, (_, h) => getHoleExtra(round, h)?.closest_gir_player ?? null);
-  const pressMults = Array.from({ length: 18 }, (_, h) => { const e = getHoleExtra(round, h); return (e?.double_pressed ? 4 : e?.pressed ? 2 : 1); });
 
   const result = calcScotchRound(netScores, grossScores, scotchTeams, pars, girPlayers);
 
   const holesWithScores = netScores[0].filter(s => s !== null).length;
   const currentSegment = Math.min(Math.floor(holesWithScores / 6), 2);
-  const bet = getBetAmount(round);
-
-  const playerDollars = PLAYERS.map((_, p) => {
-    let total = 0;
-    for (let h = 0; h < 18; h++) {
-      const seg = Math.floor(h / 6);
-      const [teamA, teamB] = scotchTeams[seg];
-      const mult = pressMults[h];
-      const holeResult = result.holeResults[h];
-      if (teamA.includes(p)) total += holeResult.teamAPoints * bet * mult;
-      else if (teamB.includes(p)) total += holeResult.teamBPoints * bet * mult;
-    }
-    return total;
-  });
-
-  const segmentDollars = result.segments.map((seg, i) => {
-    let aTotal = 0, bTotal = 0;
-    for (let h = i * 6; h < (i + 1) * 6; h++) {
-      const mult = pressMults[h];
-      aTotal += result.holeResults[h].teamAPoints * bet * mult;
-      bTotal += result.holeResults[h].teamBPoints * bet * mult;
-    }
-    return { aTotal, bTotal };
-  });
 
   return (
     <div className="px-4 py-4 space-y-4">
@@ -95,10 +68,7 @@ export default function ScotchRound({ round }: { round: number }) {
           className="w-full flex items-center justify-between"
         >
           <h3 className="text-xs text-gold font-medium uppercase tracking-wider">Settings</h3>
-          <div className="flex items-center gap-2">
-            <span className="text-cream-dim/60 text-[10px]">${bet}/pt</span>
-            <span className="text-cream-dim text-xs">{settingsOpen ? '\u25B2' : '\u25BC'}</span>
-          </div>
+          <span className="text-cream-dim text-xs">{settingsOpen ? '\u25B2' : '\u25BC'}</span>
         </button>
         {settingsOpen && (
           <div className="mt-3 space-y-3 pt-3 border-t border-gold/10">
@@ -126,18 +96,16 @@ export default function ScotchRound({ round }: { round: number }) {
               </div>
             </div>
             <RoundHandicapEditor round={round} />
-            <BetPicker round={round} />
           </div>
         )}
       </div>
 
       {/* Segment Scores */}
       <div className="bg-green-card rounded-xl border border-gold/20 p-3">
-        <h3 className="text-xs text-gold font-medium mb-2 uppercase tracking-wider">Scotch Points by Segment</h3>
+        <h3 className="text-xs text-gold font-medium mb-2 uppercase tracking-wider">Points by Segment</h3>
         <div className="space-y-2">
           {result.segments.map((seg, i) => {
             const isActive = i === currentSegment;
-            const sd = segmentDollars[i];
             return (
               <div key={i} className={`p-2 rounded-lg ${isActive ? 'bg-green-deeper/50 border border-gold/20' : ''}`}>
                 <div className="flex items-center justify-between text-sm">
@@ -151,10 +119,6 @@ export default function ScotchRound({ round }: { round: number }) {
                     <span className="text-blue-400 font-bold">{teamNames(seg.pairing[1])}: {seg.teamB}</span>
                   </div>
                 </div>
-                <div className="flex justify-end gap-3 mt-0.5 text-[10px]">
-                  <span className="text-yellow-400/60">${sd.aTotal.toFixed(2)}</span>
-                  <span className="text-blue-400/60">${sd.bTotal.toFixed(2)}</span>
-                </div>
               </div>
             );
           })}
@@ -165,14 +129,12 @@ export default function ScotchRound({ round }: { round: number }) {
             {PLAYERS.map((name, p) => (
               <span key={p} className="text-cream">
                 {players[p]?.[0] ?? name[0]}: <span className="text-gold font-bold">{result.playerPoints[p]}</span>
-                <span className="text-cream-dim/50 ml-0.5">(${playerDollars[p].toFixed(2)})</span>
               </span>
             ))}
           </div>
         </div>
       </div>
 
-      <PressPanel round={round} />
       <Scorecard round={round} holePoints={result.holeResults} />
       <HoleExtrasPanel round={round} showGir showCtp />
     </div>

@@ -6,13 +6,11 @@ import { PLAYERS, ROUNDS } from '@/lib/types';
 import { calcWolfRound, getWolfForHole } from '@/lib/games';
 import Scorecard from './Scorecard';
 import HoleExtrasPanel from './HoleExtrasPanel';
-import BetPicker from './BetPicker';
-import PressPanel from './PressPanel';
 import RoundHandicapEditor from './RoundHandicapEditor';
 
 export default function WolfRound() {
   const round = 1;
-  const { trip, getPlayerNetScores, getPlayerRoundScores, getPar, getHoleExtra, setHoleExtra, getBetAmount, setWolfTeeOrder } = useTripContext();
+  const { trip, getPlayerNetScores, getPlayerRoundScores, getPar, getHoleExtra, setHoleExtra, setWolfTeeOrder } = useTripContext();
   const [activeWolfHole, setActiveWolfHole] = useState<number | null>(null);
   const [editingOrder, setEditingOrder] = useState(false);
   const [tempOrder, setTempOrder] = useState<number[]>([0, 1, 2, 3]);
@@ -28,22 +26,8 @@ export default function WolfRound() {
   const wolfPartners = Array.from({ length: 18 }, (_, h) => getHoleExtra(round, h)?.wolf_partner ?? null);
   const wolfSpits = Array.from({ length: 18 }, (_, h) => getHoleExtra(round, h)?.wolf_spit ?? false);
   const girPlayers = Array.from({ length: 18 }, (_, h) => getHoleExtra(round, h)?.closest_gir_player ?? null);
-  const pressMults = Array.from({ length: 18 }, (_, h) => { const e = getHoleExtra(round, h); return (e?.double_pressed ? 4 : e?.pressed ? 2 : 1); });
 
   const result = calcWolfRound(netScores, grossScores, teeOrder, wolfPartners, wolfSpits, pars, girPlayers);
-  const bet = getBetAmount(round);
-
-  // Per-player dollars with presses
-  const playerDollars = PLAYERS.map((_, p) => {
-    let total = 0;
-    for (let h = 0; h < 18; h++) {
-      const hr = result.holeResults[h];
-      const mult = pressMults[h];
-      if (hr.wolfTeam.includes(p)) total += hr.wolfTeamPoints * bet * mult;
-      else total += hr.otherTeamPoints * bet * mult;
-    }
-    return total;
-  });
 
   const handleWolfPick = async (hole: number, partner: number | null, spit: boolean = false) => {
     await setHoleExtra(round, hole, { wolf_partner: partner as any, wolf_spit: spit });
@@ -67,13 +51,12 @@ export default function WolfRound() {
         >
           <h3 className="text-xs text-gold font-medium uppercase tracking-wider">Settings</h3>
           <div className="flex items-center gap-2">
-            <span className="text-cream-dim/60 text-[10px]">${bet}/pt {'\u00B7'} {teeOrder.map(i => (players[i] ?? PLAYERS[i])[0]).join('-')}</span>
+            <span className="text-cream-dim/60 text-[10px]">{teeOrder.map(i => (players[i] ?? PLAYERS[i])[0]).join('-')}</span>
             <span className="text-cream-dim text-xs">{settingsOpen ? '\u25B2' : '\u25BC'}</span>
           </div>
         </button>
         {settingsOpen && (
           <div className="mt-3 space-y-3 pt-3 border-t border-gold/10">
-            {/* Tee Order */}
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-cream-dim text-[10px]">Tee Order (Wolf tees off first)</span>
@@ -118,7 +101,6 @@ export default function WolfRound() {
               )}
             </div>
             <RoundHandicapEditor round={round} />
-            <BetPicker round={round} />
           </div>
         )}
       </div>
@@ -131,7 +113,6 @@ export default function WolfRound() {
             <div key={p} className="bg-green-deeper/50 rounded-lg py-2">
               <div className="text-cream-dim text-xs mb-1">{players[p] ?? name}</div>
               <div className="text-lg font-bold text-gold">{result.playerPoints[p]}</div>
-              <div className="text-[10px] text-cream-dim/50">${playerDollars[p].toFixed(2)}</div>
             </div>
           ))}
         </div>
@@ -219,7 +200,6 @@ export default function WolfRound() {
         )}
       </div>
 
-      <PressPanel round={round} />
       <Scorecard round={round} holePoints={result.holeResults.map(hr => ({ teamAPoints: hr.wolfTeamPoints, teamBPoints: hr.otherTeamPoints }))} />
       <HoleExtrasPanel round={round} showGir showCtp />
     </div>
