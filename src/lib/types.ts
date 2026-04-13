@@ -2,8 +2,8 @@ export const PLAYERS = ['Derek', 'Pat', 'Joey', 'Matt'] as const;
 export type PlayerName = (typeof PLAYERS)[number];
 
 export const ROUNDS = [
-  { name: 'Barefoot Fazio', par: 71, format: '6-6-6 Scotch', slope: 136, rating: 71.0 },
-  { name: 'Barefoot Love', par: 72, format: 'Wolf', slope: 137, rating: 72.4 },
+  { name: 'Barefoot Love', par: 72, format: '6-6-6 Scotch', slope: 137, rating: 72.4 },
+  { name: 'Barefoot Fazio', par: 71, format: 'Wolf', slope: 136, rating: 71.0 },
   { name: 'Barefoot Norman', par: 72, format: '6-6-6 Scotch', slope: 136, rating: 71.4 },
   { name: 'Barefoot Dye', par: 72, format: '2-Man Scramble', slope: 134, rating: 72.9 },
 ] as const;
@@ -17,16 +17,16 @@ export const ROUND_LABELS = [
 
 // Hole-by-hole pars
 export const DEFAULT_PARS: number[][] = [
-  [4, 4, 3, 5, 4, 3, 5, 3, 4, 5, 3, 5, 4, 4, 4, 3, 4, 4], // Fazio 71
   [4, 5, 3, 4, 4, 4, 4, 5, 3, 4, 3, 4, 5, 4, 3, 4, 4, 5], // Love 72
+  [4, 4, 3, 5, 4, 3, 5, 3, 4, 5, 3, 5, 4, 4, 4, 3, 4, 4], // Fazio 71
   [4, 4, 3, 4, 5, 4, 3, 4, 5, 3, 4, 4, 4, 4, 5, 3, 4, 5], // Norman 72
   [4, 4, 3, 4, 5, 3, 4, 5, 4, 4, 4, 5, 4, 4, 3, 5, 3, 4], // Dye 72
 ];
 
 // Hole handicap rankings (lower = harder = gets strokes first)
 export const DEFAULT_HOLE_HANDICAPS: number[][] = [
-  [9, 1, 17, 7, 3, 13, 5, 15, 11, 4, 16, 6, 2, 10, 14, 18, 8, 12], // Fazio
   [13, 7, 15, 17, 1, 9, 5, 3, 11, 16, 18, 2, 8, 10, 14, 12, 6, 4], // Love
+  [9, 1, 17, 7, 3, 13, 5, 15, 11, 4, 16, 6, 2, 10, 14, 18, 8, 12], // Fazio
   [11, 9, 13, 5, 7, 1, 15, 17, 3, 14, 6, 2, 4, 18, 10, 16, 12, 8], // Norman
   [6, 14, 12, 18, 10, 8, 2, 16, 4, 13, 1, 15, 17, 3, 7, 11, 9, 5], // Dye
 ];
