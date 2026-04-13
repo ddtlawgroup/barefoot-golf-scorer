@@ -72,7 +72,7 @@ export default function Summary() {
       const netScores = PLAYERS.map((_, p) => getPlayerNetScores(r, p));
       const grossScores = PLAYERS.map((_, p) => getPlayerRoundScores(r, p));
       const girPlayers = Array.from({ length: 18 }, (_, h) => getHoleExtra(r, h)?.closest_gir_player ?? null);
-      const pressedHoles = Array.from({ length: 18 }, (_, h) => getHoleExtra(r, h)?.pressed ?? false);
+      const pressMults = Array.from({ length: 18 }, (_, h) => { const e = getHoleExtra(r, h); return (e?.double_pressed ? 4 : e?.pressed ? 2 : 1); });
       const result = calcScotchRound(netScores, grossScores, trip.scotch_teams, pars, girPlayers);
       const bet = getBetAmount(r);
 
@@ -82,7 +82,7 @@ export default function Summary() {
       for (let h = 0; h < 18; h++) {
         const seg = Math.floor(h / 6);
         const [teamA, teamB] = trip.scotch_teams[seg];
-        const mult = pressedHoles[h] ? 2 : 1;
+        const mult = pressMults[h];
         const hr = result.holeResults[h];
         teamA.forEach(p => { scotchPlayerDollars[p] += hr.teamAPoints * bet * mult; });
         teamB.forEach(p => { scotchPlayerDollars[p] += hr.teamBPoints * bet * mult; });
@@ -100,7 +100,7 @@ export default function Summary() {
     const girPlayers = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.closest_gir_player ?? null);
     const wolfPartners = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.wolf_partner ?? null);
     const wolfSpits = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.wolf_spit ?? false);
-    const pressedHoles = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.pressed ?? false);
+    const pressMults = Array.from({ length: 18 }, (_, h) => { const e = getHoleExtra(1, h); return (e?.double_pressed ? 4 : e?.pressed ? 2 : 1); });
     const result = calcWolfRound(netScores, grossScores, trip.wolf_tee_order, wolfPartners, wolfSpits, pars, girPlayers);
     const bet = getBetAmount(1);
 
@@ -108,7 +108,7 @@ export default function Summary() {
 
     for (let h = 0; h < 18; h++) {
       const hr = result.holeResults[h];
-      const mult = pressedHoles[h] ? 2 : 1;
+      const mult = pressMults[h];
       hr.wolfTeam.forEach(p => { wolfPlayerDollars[p] += hr.wolfTeamPoints * bet * mult; });
       hr.otherTeam.forEach(p => { wolfPlayerDollars[p] += hr.otherTeamPoints * bet * mult; });
     }
@@ -162,14 +162,29 @@ export default function Summary() {
     }
   }
 
-  // ── CTP leaderboard ──
-  const ctpCounts = [0, 0, 0, 0];
+  // ── CTP leaderboard (with carry-overs, $5 per CTP) ──
+  const CTP_BET = 5;
+  const ctpWins = [0, 0, 0, 0]; // how many CTPs each player won (including carries)
+  const ctpDollars = [0, 0, 0, 0];
+  // Flatten all par 3s across all rounds in order, carry across rounds
+  let ctpCarry = 0;
   for (let r = 0; r < 4; r++) {
-    const pars = Array.from({ length: 18 }, (_, h) => getPar(r, h));
-    const par3s = getPar3Holes(pars);
+    const rPars = Array.from({ length: 18 }, (_, h) => getPar(r, h));
+    const par3s = getPar3Holes(rPars);
     par3s.forEach(h => {
       const winner = getHoleExtra(r, h)?.ctp_winner;
-      if (winner !== null && winner !== undefined) ctpCounts[winner]++;
+      if (winner !== null && winner !== undefined) {
+        const payout = (1 + ctpCarry) * CTP_BET;
+        ctpWins[winner] += 1 + ctpCarry;
+        ctpDollars[winner] += payout;
+        // Each other player pays the winner
+        for (let p = 0; p < 4; p++) {
+          if (p !== winner) ctpDollars[p] -= payout / 3;
+        }
+        ctpCarry = 0;
+      } else {
+        ctpCarry++;
+      }
     });
   }
 
@@ -200,14 +215,14 @@ export default function Summary() {
       const netScores = PLAYERS.map((_, p) => getPlayerNetScores(r, p));
       const grossScores = PLAYERS.map((_, p) => getPlayerRoundScores(r, p));
       const girPlayers = Array.from({ length: 18 }, (_, h) => getHoleExtra(r, h)?.closest_gir_player ?? null);
-      const pressedHoles = Array.from({ length: 18 }, (_, h) => getHoleExtra(r, h)?.pressed ?? false);
+      const pressMults = Array.from({ length: 18 }, (_, h) => { const e = getHoleExtra(r, h); return (e?.double_pressed ? 4 : e?.pressed ? 2 : 1); });
       const result = calcScotchRound(netScores, grossScores, trip.scotch_teams, pars, girPlayers);
       const bet = getBetAmount(r);
 
       for (let h = 0; h < 18; h++) {
         const seg = Math.floor(h / 6);
         const [teamA, teamB] = trip.scotch_teams[seg];
-        const mult = pressedHoles[h] ? 2 : 1;
+        const mult = pressMults[h];
         const hr = result.holeResults[h];
         const diff = hr.teamAPoints - hr.teamBPoints;
         // diff > 0: team A won, team B members owe team A members
@@ -241,13 +256,13 @@ export default function Summary() {
     const girPlayers = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.closest_gir_player ?? null);
     const wolfPartners = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.wolf_partner ?? null);
     const wolfSpits = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.wolf_spit ?? false);
-    const pressedHoles = Array.from({ length: 18 }, (_, h) => getHoleExtra(1, h)?.pressed ?? false);
+    const pressMults = Array.from({ length: 18 }, (_, h) => { const e = getHoleExtra(1, h); return (e?.double_pressed ? 4 : e?.pressed ? 2 : 1); });
     const result = calcWolfRound(netScores, grossScores, trip.wolf_tee_order, wolfPartners, wolfSpits, pars, girPlayers);
     const bet = getBetAmount(1);
 
     for (let h = 0; h < 18; h++) {
       const hr = result.holeResults[h];
-      const mult = pressedHoles[h] ? 2 : 1;
+      const mult = pressMults[h];
       const diff = hr.wolfTeamPoints - hr.otherTeamPoints;
       const perPair = Math.abs(diff) * bet * mult;
       if (diff > 0) {
@@ -285,6 +300,27 @@ export default function Summary() {
           ledger[w][l] += scrambleBet;
         }
       }
+    }
+  }
+
+  // CTP into ledger: each CTP win, the other 3 each owe the winner $5 * (1 + carries)
+  {
+    let carry = 0;
+    for (let r = 0; r < 4; r++) {
+      const rPars = Array.from({ length: 18 }, (_, h) => getPar(r, h));
+      const par3s = getPar3Holes(rPars);
+      par3s.forEach(h => {
+        const winner = getHoleExtra(r, h)?.ctp_winner;
+        if (winner !== null && winner !== undefined) {
+          const perLoser = (1 + carry) * CTP_BET;
+          for (let p = 0; p < 4; p++) {
+            if (p !== winner) ledger[winner][p] += perLoser;
+          }
+          carry = 0;
+        } else {
+          carry++;
+        }
+      });
     }
   }
 
@@ -450,17 +486,23 @@ export default function Summary() {
 
       {/* CTP Leaderboard */}
       <div className="bg-green-card rounded-xl border border-gold/20 p-4">
-        <h3 className="text-xs text-gold font-medium mb-3 uppercase tracking-wider inline-flex items-center">Closest to Pin (Par 3s)<CtpInfo /></h3>
+        <h3 className="text-xs text-gold font-medium mb-3 uppercase tracking-wider inline-flex items-center">Closest to Pin (Par 3s) {'\u00B7'} $5/hole<CtpInfo /></h3>
         <div className="grid grid-cols-4 gap-2 text-center">
           {PLAYERS.map((name, p) => (
             <div key={p} className="bg-green-deeper/50 rounded-lg py-3">
               <div className="text-cream-dim text-xs mb-1">{players[p] ?? name}</div>
-              <div className={`text-xl font-bold ${ctpCounts[p] > 0 ? 'text-gold' : 'text-cream-dim/50'}`}>
-                {ctpCounts[p]}
+              <div className={`text-xl font-bold ${ctpWins[p] > 0 ? 'text-gold' : 'text-cream-dim/50'}`}>
+                {ctpWins[p]}
+              </div>
+              <div className={`text-[10px] ${ctpDollars[p] > 0 ? 'text-green-400' : ctpDollars[p] < 0 ? 'text-red-400' : 'text-cream-dim/50'}`}>
+                {ctpDollars[p] !== 0 ? `${ctpDollars[p] > 0 ? '+' : ''}$${ctpDollars[p].toFixed(2)}` : '-'}
               </div>
             </div>
           ))}
         </div>
+        {ctpCarry > 0 && (
+          <p className="text-cream-dim/60 text-xs text-center mt-2">{ctpCarry} CTP{ctpCarry !== 1 ? 's' : ''} carrying (${(ctpCarry * CTP_BET).toFixed(0)} pot on next par 3)</p>
+        )}
       </div>
 
       {/* Total Strokes */}

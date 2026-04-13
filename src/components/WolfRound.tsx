@@ -27,7 +27,7 @@ export default function WolfRound() {
   const wolfPartners = Array.from({ length: 18 }, (_, h) => getHoleExtra(round, h)?.wolf_partner ?? null);
   const wolfSpits = Array.from({ length: 18 }, (_, h) => getHoleExtra(round, h)?.wolf_spit ?? false);
   const girPlayers = Array.from({ length: 18 }, (_, h) => getHoleExtra(round, h)?.closest_gir_player ?? null);
-  const pressedHoles = Array.from({ length: 18 }, (_, h) => getHoleExtra(round, h)?.pressed ?? false);
+  const pressMults = Array.from({ length: 18 }, (_, h) => { const e = getHoleExtra(round, h); return (e?.double_pressed ? 4 : e?.pressed ? 2 : 1); });
 
   const result = calcWolfRound(netScores, grossScores, teeOrder, wolfPartners, wolfSpits, pars, girPlayers);
   const bet = getBetAmount(round);
@@ -37,7 +37,7 @@ export default function WolfRound() {
     let total = 0;
     for (let h = 0; h < 18; h++) {
       const hr = result.holeResults[h];
-      const mult = pressedHoles[h] ? 2 : 1;
+      const mult = pressMults[h];
       if (hr.wolfTeam.includes(p)) total += hr.wolfTeamPoints * bet * mult;
       else total += hr.otherTeamPoints * bet * mult;
     }
@@ -54,7 +54,7 @@ export default function WolfRound() {
       <div className="text-center">
         <h2 className="font-serif text-2xl text-gold font-bold">{ROUNDS[round].name}</h2>
         <p className="text-cream-dim text-sm">
-          Round 2 {'\u00B7'} Par {ROUNDS[round].par} {'\u00B7'} Wolf
+          Round 2 {'\u00B7'} Par {ROUNDS[round].par} {'\u00B7'} {ROUNDS[round].tee} {'\u00B7'} Wolf
         </p>
       </div>
 
@@ -218,8 +218,8 @@ export default function WolfRound() {
       </div>
 
       <PressPanel round={round} />
-      <HoleExtrasPanel round={round} showGir showCtp />
       <Scorecard round={round} />
+      <HoleExtrasPanel round={round} showGir showCtp />
     </div>
   );
 }

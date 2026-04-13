@@ -256,7 +256,9 @@ export function TripProvider({ children }: { children: React.ReactNode }) {
 
   const getPlayerCourseHcpFn = useCallback((player: number, round: number): number => {
     const players = trip?.players ?? DEFAULT_PLAYERS;
-    return courseHandicap(players[player].handicapIndex, ROUNDS[round].slope);
+    const p = players[player];
+    const hcpIndex = p.roundHandicaps?.[round] ?? p.handicapIndex;
+    return courseHandicap(hcpIndex, ROUNDS[round].slope);
   }, [trip]);
 
   const getStrokeHolesFn = useCallback((player: number, round: number): boolean[] => {

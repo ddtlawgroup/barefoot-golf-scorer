@@ -26,7 +26,7 @@ export default function ScotchRound({ round }: { round: number }) {
         <div className="text-center">
           <h2 className="font-serif text-2xl text-gold font-bold">{ROUNDS[round].name}</h2>
           <p className="text-cream-dim text-sm">
-            Round {round + 1} {'\u00B7'} Par {ROUNDS[round].par} {'\u00B7'} 6-6-6 Scotch
+            Round {round + 1} {'\u00B7'} Par {ROUNDS[round].par} {'\u00B7'} {ROUNDS[round].tee} {'\u00B7'} 6-6-6 Scotch
           </p>
         </div>
         <div className="bg-green-card rounded-xl border border-gold/20 p-4 text-center space-y-4">
@@ -47,7 +47,7 @@ export default function ScotchRound({ round }: { round: number }) {
   const netScores = PLAYERS.map((_, p) => getPlayerNetScores(round, p));
   const grossScores = PLAYERS.map((_, p) => getPlayerRoundScores(round, p));
   const girPlayers = Array.from({ length: 18 }, (_, h) => getHoleExtra(round, h)?.closest_gir_player ?? null);
-  const pressedHoles = Array.from({ length: 18 }, (_, h) => getHoleExtra(round, h)?.pressed ?? false);
+  const pressMults = Array.from({ length: 18 }, (_, h) => { const e = getHoleExtra(round, h); return (e?.double_pressed ? 4 : e?.pressed ? 2 : 1); });
 
   const result = calcScotchRound(netScores, grossScores, scotchTeams, pars, girPlayers);
 
@@ -60,7 +60,7 @@ export default function ScotchRound({ round }: { round: number }) {
     for (let h = 0; h < 18; h++) {
       const seg = Math.floor(h / 6);
       const [teamA, teamB] = scotchTeams[seg];
-      const mult = pressedHoles[h] ? 2 : 1;
+      const mult = pressMults[h];
       const holeResult = result.holeResults[h];
       if (teamA.includes(p)) total += holeResult.teamAPoints * bet * mult;
       else if (teamB.includes(p)) total += holeResult.teamBPoints * bet * mult;
@@ -71,7 +71,7 @@ export default function ScotchRound({ round }: { round: number }) {
   const segmentDollars = result.segments.map((seg, i) => {
     let aTotal = 0, bTotal = 0;
     for (let h = i * 6; h < (i + 1) * 6; h++) {
-      const mult = pressedHoles[h] ? 2 : 1;
+      const mult = pressMults[h];
       aTotal += result.holeResults[h].teamAPoints * bet * mult;
       bTotal += result.holeResults[h].teamBPoints * bet * mult;
     }
@@ -83,7 +83,7 @@ export default function ScotchRound({ round }: { round: number }) {
       <div className="text-center">
         <h2 className="font-serif text-2xl text-gold font-bold">{ROUNDS[round].name}</h2>
         <p className="text-cream-dim text-sm">
-          Round {round + 1} {'\u00B7'} Par {ROUNDS[round].par} {'\u00B7'} 6-6-6 Scotch
+          Round {round + 1} {'\u00B7'} Par {ROUNDS[round].par} {'\u00B7'} {ROUNDS[round].tee} {'\u00B7'} 6-6-6 Scotch
         </p>
       </div>
 
@@ -171,8 +171,8 @@ export default function ScotchRound({ round }: { round: number }) {
       </div>
 
       <PressPanel round={round} />
-      <HoleExtrasPanel round={round} showGir showCtp />
       <Scorecard round={round} />
+      <HoleExtrasPanel round={round} showGir showCtp />
     </div>
   );
 }

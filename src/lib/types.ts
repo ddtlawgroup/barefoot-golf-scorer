@@ -2,10 +2,10 @@ export const PLAYERS = ['Derek', 'Pat', 'Joey', 'Matt'] as const;
 export type PlayerName = (typeof PLAYERS)[number];
 
 export const ROUNDS = [
-  { name: 'Barefoot Fazio', par: 71, format: '6-6-6 Scotch', slope: 136, rating: 71.0 },
-  { name: 'Barefoot Love', par: 72, format: 'Wolf', slope: 137, rating: 72.4 },
-  { name: 'Barefoot Norman', par: 72, format: '6-6-6 Scotch', slope: 136, rating: 71.4 },
-  { name: 'Barefoot Dye', par: 72, format: '2-Man Scramble', slope: 134, rating: 72.9 },
+  { name: 'Barefoot Love', par: 72, format: '6-6-6 Scotch', slope: 137, rating: 72.4, tee: '9:08 AM' },
+  { name: 'Barefoot Fazio', par: 71, format: 'Wolf', slope: 136, rating: 71.0, tee: '2:45 PM' },
+  { name: 'Barefoot Norman', par: 72, format: '6-6-6 Scotch', slope: 136, rating: 71.4, tee: '9:08 AM' },
+  { name: 'Barefoot Dye', par: 72, format: '2-Man Scramble', slope: 134, rating: 72.9, tee: '2:52 PM' },
 ] as const;
 
 export const ROUND_LABELS = [
@@ -15,18 +15,18 @@ export const ROUND_LABELS = [
   'R4: Scramble',
 ] as const;
 
-// Hole-by-hole pars
+// Hole-by-hole pars (R1=Love, R2=Fazio, R3=Norman, R4=Dye)
 export const DEFAULT_PARS: number[][] = [
-  [4, 4, 3, 5, 4, 3, 5, 3, 4, 5, 3, 5, 4, 4, 4, 3, 4, 4], // Fazio 71
   [4, 5, 3, 4, 4, 4, 4, 5, 3, 4, 3, 4, 5, 4, 3, 4, 4, 5], // Love 72
+  [4, 4, 3, 5, 4, 3, 5, 3, 4, 5, 3, 5, 4, 4, 4, 3, 4, 4], // Fazio 71
   [4, 4, 3, 4, 5, 4, 3, 4, 5, 3, 4, 4, 4, 4, 5, 3, 4, 5], // Norman 72
   [4, 4, 3, 4, 5, 3, 4, 5, 4, 4, 4, 5, 4, 4, 3, 5, 3, 4], // Dye 72
 ];
 
 // Hole handicap rankings (lower = harder = gets strokes first)
 export const DEFAULT_HOLE_HANDICAPS: number[][] = [
-  [9, 1, 17, 7, 3, 13, 5, 15, 11, 4, 16, 6, 2, 10, 14, 18, 8, 12], // Fazio
   [13, 7, 15, 17, 1, 9, 5, 3, 11, 16, 18, 2, 8, 10, 14, 12, 6, 4], // Love
+  [9, 1, 17, 7, 3, 13, 5, 15, 11, 4, 16, 6, 2, 10, 14, 18, 8, 12], // Fazio
   [11, 9, 13, 5, 7, 1, 15, 17, 3, 14, 6, 2, 4, 18, 10, 16, 12, 8], // Norman
   [6, 14, 12, 18, 10, 8, 2, 16, 4, 13, 1, 15, 17, 3, 7, 11, 9, 5], // Dye
 ];
@@ -60,6 +60,7 @@ export function scrambleHandicap(hcp1: number, hcp2: number): number {
 export interface PlayerData {
   name: string;
   handicapIndex: number;
+  roundHandicaps?: number[]; // optional per-round handicap index overrides [r0, r1, r2, r3]
 }
 
 export const DEFAULT_PLAYERS: PlayerData[] = [
@@ -112,6 +113,7 @@ export interface HoleExtra {
   wolf_spit: boolean;
   ctp_winner: number | null;
   pressed: boolean;
+  double_pressed: boolean;
   updated_at: string;
 }
 

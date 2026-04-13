@@ -131,8 +131,8 @@ export function StablefordInfo() {
 export function CtpInfo() {
   return (
     <InfoModal title="Closest to Pin">
-      <p>A side contest tracked on every <strong className="text-gold">par 3</strong> across all 4 rounds.</p>
-      <p>On each par 3, whichever player hits their tee shot closest to the pin wins that hole's CTP. Simple count of wins determines the CTP champion.</p>
+      <p>A side contest tracked on every <strong className="text-gold">par 3</strong> across all 4 rounds. Each CTP is worth <strong className="text-gold">$5</strong>, paid by each of the other 3 players to the winner.</p>
+      <p>On each par 3, whichever player hits their tee shot closest to the pin wins. If <strong className="text-cream">no winner</strong> on a par 3 (nobody on the green, or no clear winner), the $5 <strong className="text-gold">carries over</strong> to the next par 3. A carry makes the next CTP worth $10, and it keeps stacking.</p>
       <p>This is <strong className="text-cream">separate</strong> from the "Closest GIR" point in Scotch/Wolf, which can be won on any hole. CTP is only on par 3s and is an independent side game.</p>
     </InfoModal>
   );

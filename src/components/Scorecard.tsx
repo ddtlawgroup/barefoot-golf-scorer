@@ -21,16 +21,43 @@ export default function Scorecard({ round, showNetRow = true }: ScorecardProps) 
 
   const isPar3 = (hole: number) => getPar(round, hole) === 3;
 
+  const advanceToNext = (player: number, hole: number) => {
+    const nextPlayer = player + 1;
+    if (nextPlayer < 4) {
+      setTimeout(() => setActiveInput({ player: nextPlayer, hole }), 50);
+    } else {
+      const lastHole = nine === 'front' ? 8 : 17;
+      if (hole < lastHole) {
+        setTimeout(() => setActiveInput({ player: 0, hole: hole + 1 }), 50);
+      } else {
+        setActiveInput(null);
+      }
+    }
+  };
+
   const handleScoreInput = (player: number, hole: number, value: string) => {
     if (value === '') {
       setScore(round, player, hole, null);
+      setActiveInput(null);
     } else {
       const num = parseInt(value);
-      if (!isNaN(num) && num >= 1 && num <= 15) {
+      if (!isNaN(num) && num >= 1 && num <= 9) {
         setScore(round, player, hole, num);
+        advanceToNext(player, hole);
       }
     }
-    setActiveInput(null);
+  };
+
+  // Auto-submit on single digit (1-9)
+  const handleKeyInput = (player: number, hole: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val.length === 1) {
+      const num = parseInt(val);
+      if (!isNaN(num) && num >= 1 && num <= 9) {
+        setScore(round, player, hole, num);
+        advanceToNext(player, hole);
+      }
+    }
   };
 
   const calcNineTotal = (scores: (number | null)[], start: number) =>
@@ -114,14 +141,13 @@ export default function Scorecard({ round, showNetRow = true }: ScorecardProps) 
                             inputMode="numeric"
                             pattern="[0-9]*"
                             defaultValue={gross ?? ''}
-                            onBlur={(e) => handleScoreInput(p, h, e.target.value)}
+                            onChange={(e) => handleKeyInput(p, h, e)}
+                            onBlur={(e) => {
+                              if (e.target.value === '') handleScoreInput(p, h, '');
+                            }}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                handleScoreInput(p, h, (e.target as HTMLInputElement).value);
-                                if (h < (nine === 'front' ? 8 : 17)) {
-                                  setTimeout(() => setActiveInput({ player: p, hole: h + 1 }), 50);
-                                }
-                              }
+                              if (e.key === 'Enter') handleScoreInput(p, h, (e.target as HTMLInputElement).value);
+                              if (e.key === 'Escape') setActiveInput(null);
                             }}
                             autoFocus
                             className="w-8 h-7 bg-gold/20 border border-gold rounded text-center text-cream text-sm outline-none"

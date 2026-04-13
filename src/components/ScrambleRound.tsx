@@ -48,16 +48,38 @@ export default function ScrambleRound() {
   const holes = Array.from({ length: 9 }, (_, i) => startHole + i);
   const parNineTotal = holes.reduce((s, h) => s + getPar(round, h), 0);
 
+  const advanceScramble = (team: number, hole: number) => {
+    if (team === 0) {
+      setTimeout(() => setActiveInput({ team: 1, hole }), 50);
+    } else {
+      const lastHole = nine === 'front' ? 8 : 17;
+      if (hole < lastHole) setTimeout(() => setActiveInput({ team: 0, hole: hole + 1 }), 50);
+      else setActiveInput(null);
+    }
+  };
+
   const handleInput = (team: number, hole: number, value: string) => {
     if (value === '') {
       setScrambleScore(hole, team, null);
+      setActiveInput(null);
     } else {
       const num = parseInt(value);
-      if (!isNaN(num) && num >= 1 && num <= 15) {
+      if (!isNaN(num) && num >= 1 && num <= 9) {
         setScrambleScore(hole, team, num);
+        advanceScramble(team, hole);
       }
     }
-    setActiveInput(null);
+  };
+
+  const handleScrambleKeyInput = (team: number, hole: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val.length === 1) {
+      const num = parseInt(val);
+      if (!isNaN(num) && num >= 1 && num <= 9) {
+        setScrambleScore(hole, team, num);
+        advanceScramble(team, hole);
+      }
+    }
   };
 
   const teamName = (teamIdx: number) => teams[teamIdx].map(i => players[i] ?? PLAYERS[i]).join(' & ');
@@ -83,7 +105,7 @@ export default function ScrambleRound() {
       <div className="text-center">
         <h2 className="font-serif text-2xl text-gold font-bold">{ROUNDS[round].name}</h2>
         <p className="text-cream-dim text-sm">
-          Round 4 {'\u00B7'} Par {ROUNDS[round].par} {'\u00B7'} 2-Man Scramble
+          Round 4 {'\u00B7'} Par {ROUNDS[round].par} {'\u00B7'} {ROUNDS[round].tee} {'\u00B7'} 2-Man Scramble
         </p>
       </div>
 
@@ -267,14 +289,11 @@ export default function ScrambleRound() {
                             type="number"
                             inputMode="numeric"
                             defaultValue={gross ?? ''}
-                            onBlur={(e) => handleInput(t, h, e.target.value)}
+                            onChange={(e) => handleScrambleKeyInput(t, h, e)}
+                            onBlur={(e) => { if (e.target.value === '') handleInput(t, h, ''); }}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                handleInput(t, h, (e.target as HTMLInputElement).value);
-                                if (h < (nine === 'front' ? 8 : 17)) {
-                                  setTimeout(() => setActiveInput({ team: t, hole: h + 1 }), 50);
-                                }
-                              }
+                              if (e.key === 'Enter') handleInput(t, h, (e.target as HTMLInputElement).value);
+                              if (e.key === 'Escape') setActiveInput(null);
                             }}
                             autoFocus
                             className="w-8 h-7 bg-gold/20 border border-gold rounded text-center text-cream text-sm outline-none"
