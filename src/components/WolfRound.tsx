@@ -29,6 +29,15 @@ export default function WolfRound() {
 
   const result = calcWolfRound(netScores, grossScores, teeOrder, wolfPartners, wolfSpits, pars, girPlayers);
 
+  // Build per-player points per hole
+  const playerHolePoints: number[][] = Array.from({ length: 18 }, (_, h) => {
+    const hr = result.holeResults[h];
+    const pts = [0, 0, 0, 0];
+    hr.wolfTeam.forEach(p => { pts[p] = hr.wolfTeamPoints; });
+    hr.otherTeam.forEach(p => { pts[p] = hr.otherTeamPoints; });
+    return pts;
+  });
+
   const handleWolfPick = async (hole: number, partner: number | null, spit: boolean = false) => {
     await setHoleExtra(round, hole, { wolf_partner: partner as any, wolf_spit: spit });
     setActiveWolfHole(null);
@@ -130,16 +139,19 @@ export default function WolfRound() {
             const spit = extra?.wolf_spit ?? false;
             const isExpanded = activeWolfHole === h;
 
+            // Determine display: if spit, the spitter is the featured "lone" player
+            let featuredName = players[wolf]?.[0] ?? '';
             let label = '';
             let labelColor = 'text-cream-dim/40';
             if (partner !== null && partner !== undefined && !spit) {
               label = `+${players[partner]?.[0] ?? ''}`;
               labelColor = 'text-green-400';
-            } else if (spit) {
-              label = 'Spit';
+            } else if (spit && partner !== null && partner !== undefined) {
+              featuredName = players[partner]?.[0] ?? '';
+              label = '1v3 (2x)';
               labelColor = 'text-red-400';
             } else if (extra) {
-              label = 'Lone';
+              label = 'Lone (2x)';
               labelColor = 'text-orange-400';
             }
 
@@ -150,7 +162,7 @@ export default function WolfRound() {
                 className={`py-1 rounded border text-[10px] transition-colors ${isExpanded ? 'ring-1 ring-gold border-gold/40' : 'border-gold/10'} bg-green-deeper/50`}
               >
                 <div className="text-cream-dim">H{h + 1}</div>
-                <div className="text-[8px] text-gold">{players[wolf]?.[0] ?? ''}{'\u{1F43A}'}</div>
+                <div className={`text-[8px] ${spit ? 'text-red-400' : 'text-gold'}`}>{featuredName}{spit ? '' : '\u{1F43A}'}</div>
                 {label && <div className={`text-[8px] ${labelColor}`}>{label}</div>}
               </button>
             );
@@ -162,12 +174,37 @@ export default function WolfRound() {
             {(() => {
               const h = activeWolfHole;
               const wolf = getWolfForHole(h, teeOrder);
+              const curExtra = getHoleExtra(round, h);
+              const curPartner = curExtra?.wolf_partner;
+              const curSpit = curExtra?.wolf_spit ?? false;
               const others = [0, 1, 2, 3].filter(p => p !== wolf);
+
+              // Show current state summary if already decided
+              const hasDecision = curExtra && (curPartner !== null || curSpit);
+
               return (
                 <>
                   <p className="text-cream text-xs">
-                    Hole {h + 1}: <span className="text-gold font-medium">{players[wolf] ?? PLAYERS[wolf]}</span> is Wolf (tees off first, watches others)
+                    Hole {h + 1}: <span className="text-gold font-medium">{players[wolf] ?? PLAYERS[wolf]}</span> is Wolf
                   </p>
+                  {hasDecision && curSpit && curPartner !== null && curPartner !== undefined && (
+                    <div className="bg-red-900/20 border border-red-500/20 rounded-lg p-2 text-xs">
+                      <span className="text-red-400 font-medium">{players[curPartner] ?? PLAYERS[curPartner]}</span>
+                      <span className="text-cream-dim"> spit and is playing 1 vs 3. All points doubled.</span>
+                    </div>
+                  )}
+                  {hasDecision && !curSpit && curPartner !== null && curPartner !== undefined && (
+                    <div className="bg-green-900/20 border border-green-500/20 rounded-lg p-2 text-xs">
+                      <span className="text-green-400 font-medium">{players[wolf] ?? PLAYERS[wolf]} + {players[curPartner] ?? PLAYERS[curPartner]}</span>
+                      <span className="text-cream-dim"> vs {others.filter(p => p !== curPartner).map(p => players[p] ?? PLAYERS[p]).join(' & ')}</span>
+                    </div>
+                  )}
+                  {hasDecision && curPartner === null && (
+                    <div className="bg-orange-900/20 border border-orange-500/20 rounded-lg p-2 text-xs">
+                      <span className="text-orange-400 font-medium">{players[wolf] ?? PLAYERS[wolf]}</span>
+                      <span className="text-cream-dim"> is Lone Wolf (1 vs 3). All points doubled.</span>
+                    </div>
+                  )}
                   <p className="text-cream-dim/60 text-[10px]">Wolf picks after each tee shot. Can't go back once you pass.</p>
                   <div className="space-y-1.5">
                     {others.map(p => (
@@ -182,7 +219,7 @@ export default function WolfRound() {
                           onClick={() => handleWolfPick(h, p, true)}
                           className="py-2 px-3 rounded bg-red-900/30 border border-red-500/20 text-red-400 text-xs active:scale-95"
                         >
-                          Spit
+                          {players[p]?.[0] ?? ''} Spits
                         </button>
                       </div>
                     ))}
@@ -200,7 +237,7 @@ export default function WolfRound() {
         )}
       </div>
 
-      <Scorecard round={round} holePoints={result.holeResults.map(hr => ({ teamAPoints: hr.wolfTeamPoints, teamBPoints: hr.otherTeamPoints }))} />
+      <Scorecard round={round} playerHolePoints={playerHolePoints} />
       <HoleExtrasPanel round={round} showGir showCtp />
     </div>
   );

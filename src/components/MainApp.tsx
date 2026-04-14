@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTripContext } from '@/lib/context';
 import PlayerSelect from './PlayerSelect';
 import SetupScreen from './SetupScreen';
@@ -19,9 +19,21 @@ const TABS: { key: Tab; label: string; sub: string }[] = [
   { key: 'summary', label: '\u2211', sub: 'Summary' },
 ];
 
+const VALID_TABS = new Set(TABS.map(t => t.key));
+
 export default function MainApp() {
   const { currentPlayer, trip } = useTripContext();
-  const [activeTab, setActiveTab] = useState<Tab>('r0');
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('golf-active-tab');
+      if (saved && VALID_TABS.has(saved as Tab)) return saved as Tab;
+    }
+    return 'r0';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('golf-active-tab', activeTab);
+  }, [activeTab]);
 
   if (!currentPlayer) return <PlayerSelect />;
   if (!trip || trip.status === 'setup') return <SetupScreen />;

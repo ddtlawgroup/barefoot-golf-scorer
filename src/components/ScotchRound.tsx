@@ -49,6 +49,17 @@ export default function ScotchRound({ round }: { round: number }) {
 
   const result = calcScotchRound(netScores, grossScores, scotchTeams, pars, girPlayers);
 
+  // Build per-player points per hole
+  const playerHolePoints: number[][] = Array.from({ length: 18 }, (_, h) => {
+    const seg = Math.floor(h / 6);
+    const [teamA, teamB] = scotchTeams[seg];
+    const hr = result.holeResults[h];
+    const pts = [0, 0, 0, 0];
+    teamA.forEach(p => { pts[p] = hr.teamAPoints; });
+    teamB.forEach(p => { pts[p] = hr.teamBPoints; });
+    return pts;
+  });
+
   const holesWithScores = netScores[0].filter(s => s !== null).length;
   const currentSegment = Math.min(Math.floor(holesWithScores / 6), 2);
 
@@ -135,7 +146,7 @@ export default function ScotchRound({ round }: { round: number }) {
         </div>
       </div>
 
-      <Scorecard round={round} holePoints={result.holeResults} />
+      <Scorecard round={round} playerHolePoints={playerHolePoints} />
       <HoleExtrasPanel round={round} showGir showCtp />
     </div>
   );
